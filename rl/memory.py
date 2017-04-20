@@ -4,6 +4,7 @@ import warnings
 import random
 
 import numpy as np
+from copy import deepcopy
 
 
 # This is to be understood as a transition: Given `state0`, performing `action`
@@ -102,7 +103,8 @@ class Memory(object):
                 break
             state.insert(0, self.recent_observations[current_idx])
         while len(state) < self.window_length:
-            state.insert(0, zeroed_observation(state[0]))
+            # state.insert(0, zeroed_observation(state[0]))
+            state.insert(0, deepcopy(state[0]))
         return state
 
     def get_config(self):
@@ -160,7 +162,8 @@ class SequentialMemory(Memory):
                     break
                 state0.insert(0, self.observations[current_idx])
             while len(state0) < self.window_length:
-                state0.insert(0, zeroed_observation(state0[0]))
+                # state0.insert(0, zeroed_observation(state0[0]))
+                state0.insert(0, deepcopy(state0[0]))
             action = self.actions[idx - 1]
             reward = self.rewards[idx - 1]
             terminal1 = self.terminals[idx - 1]
