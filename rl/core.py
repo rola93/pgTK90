@@ -287,7 +287,7 @@ class Agent(object):
                 if self.processor is not None:
                     action = self.processor.process_action(action)
                 callbacks.on_action_begin(action)
-                print action
+                #print action
                 observation, r, done, info = env.step(action)
                 observation = deepcopy(observation)
                 if self.processor is not None:
@@ -312,7 +312,7 @@ class Agent(object):
                 accumulated_info = {}
                 for _ in range(action_repetition):
                     callbacks.on_action_begin(action)
-                    print action
+                    #print action
                     observation, r, d, info = env.step(action)
                     observation = deepcopy(observation)
                     if self.processor is not None:

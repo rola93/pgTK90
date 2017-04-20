@@ -5,7 +5,7 @@ from PIL import Image
 import numpy as np
 
 # CHANGED: import gym
-from emulator.manic_miner import ManicMiner
+from emulator.manic_miner.interface import ManicMiner
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten, Convolution2D, Permute
