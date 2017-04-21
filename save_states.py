@@ -1,6 +1,8 @@
 from emulator.manic_miner import ManicMiner
 from scipy.misc import imsave
 
+folder = 'checkpoints'
+
 print('''
 Program for generating checkouts for Manic Miner
 ------------------------------------------------
@@ -45,12 +47,12 @@ for episode in xrange(20):
 			action = 'RIGHTUP'
 		elif command == 'p':
 			imsave('checkpoints/{}.jpg'.format(saved), obs)
-			manic_miner.save_state('checkpoints/{}'.format(saved))
+			manic_miner.save_state( '{}/{}'.format(folder, saved))
 			print("Saved checkpoint #{}".format(saved))
 			saved += 1
 		elif command == 'l':
 			restore_name = raw_input('Number/name of state to restore:')
-			manic_miner.reset(checkpoint='checkpoints/{}'.format(restore_name))
+			manic_miner.reset(checkpoint= '{}/{}'.format(folder, restore_name))
 			print("Restored checkpoint #{}".format(restore_name))
 			manic_miner.render()
 			continue
