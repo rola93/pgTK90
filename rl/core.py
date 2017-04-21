@@ -2,11 +2,12 @@
 import warnings
 from copy import deepcopy
 
-import numpy as np
 from keras.callbacks import History
 
 from rl.callbacks import TestLogger, TrainEpisodeLogger, TrainIntervalLogger, Visualizer, CallbackList
 
+import numpy as np
+np.random.seed(123)
 
 class Agent(object):
     """Abstract base class for all implemented agents.
@@ -43,7 +44,7 @@ class Agent(object):
 
     def fit(self, env, nb_steps, action_repetition=1, callbacks=None, verbose=1,
             visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
-            nb_max_episode_steps=None):
+            nb_max_episode_steps=None, starting_checkpoints=[]):
         """Trains the agent on the given environment.
 
         # Arguments
@@ -120,7 +121,12 @@ class Agent(object):
 
                     # Obtain the initial observation by resetting the environment.
                     self.reset_states()
-                    observation = deepcopy(env.reset())
+
+                    if starting_checkpoints:
+                        checkpoint = np.random.choice(starting_checkpoints)
+                        observation = deepcopy(env.reset(checkpoint=checkpoint))
+                    else:
+                        observation = deepcopy(env.reset())
                     if self.processor is not None:
                         observation = self.processor.process_observation(observation)
                     assert observation is not None
