@@ -1,6 +1,10 @@
 import sys, os
-import Z80, video, load
+import Z80, load
 import numpy as np
+
+#comentar o descomentar segun sistema operativo
+#import video as video #run on ubuntu
+import videoAle as video #run on mac
 
 def execute():
 	Z80.execute()
