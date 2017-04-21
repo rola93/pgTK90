@@ -5,7 +5,7 @@ from PIL import Image
 import numpy as np
 
 # CHANGED: import gym
-from emulator.manic_miner import ManicMiner
+from emulator.manic_miner.interface import ManicMiner
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten, Convolution2D, Permute
@@ -113,7 +113,7 @@ if args.mode == 'train':
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
     callbacks += [FileLogger(log_filename, interval=100)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=10000)
+    dqn.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=10000, visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)
