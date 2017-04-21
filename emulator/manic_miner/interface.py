@@ -3,6 +3,7 @@ import py_zx.spectrum as sp
 import constants as c
 import math
 import os
+import pdb
 
 class ManicMiner:
 
@@ -63,18 +64,16 @@ class ManicMiner:
 
 	def _reset(self, lives, level,hard):
 		current_score = self._score()
-		if(lives<0):
+		if(lives <= 0):
 			return True
 		self._lives(lives)
 		self._start_game_routine(level)
 		sp.put_key("NOOP")
 		sp.execute()
+		sp.execute()
+		sp.execute()
 		if(not hard):
 			self._score(current_score)
-
-		# 14 interrupciones para renderizar el completo
-		# for index in xrange(14):
-		# 	sp.execute()
 		return False
 
 	def actions(self):

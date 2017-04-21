@@ -2,6 +2,7 @@ from emulator.manic_miner import ManicMiner
 from scipy.misc import imsave
 
 folder = 'checkpoints'
+saved = 0
 
 print('''
 Program for generating checkouts for Manic Miner
@@ -10,6 +11,7 @@ Commands:
 
 Q W E    P
 A S D    L
+		 M
 
 A: Left
 S: No key
@@ -20,15 +22,19 @@ E: RIGHT UP
 
 P: Save state (will save with a sequential number starting from 0). An image is generated for visual reference.
 L: Load a previous checkpoint. Input the checkpoint number when you are requested to do so.
+M: quit.
 
 Enjoy! ;)
 ''')
-manic_miner = ManicMiner(frameskip=1)
+
+manic_miner = ManicMiner(frameskip=4)
+print("\n")
+
 for episode in xrange(20):
-	obs = manic_miner.reset(lives=1)
+	print("Reseting enviroment.")
+	manic_miner.reset(lives=1)
 	manic_miner.render()
 	done = False
-	saved = 0
 	print("episode: {}".format(episode))
 	while not done:
 		action = None
@@ -56,6 +62,10 @@ for episode in xrange(20):
 			print("Restored checkpoint #{}".format(restore_name))
 			manic_miner.render()
 			continue
+		elif command == 'm':
+			print("\nClosing. Thank you!")
+			manic_miner.close()
+			exit()
 		else:
 			action = 'NOOP'
 
