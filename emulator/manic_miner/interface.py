@@ -149,7 +149,7 @@ class ManicMiner:
     def _willy_died(self):
         mem = em.mem
         a = mem[c.D_MANIC_MINER_AIRBORNE_STATUS]
-        return bool(a == 255 or self._air() == float(0))
+        return bool(a == 255 or self._air() < 0.04)
 
     def _kill_willy_routine(self):
         sp.program_counter(c.R_KILL_WILLY)
