@@ -64,7 +64,7 @@ class ManicMiner:
 
     def _reset(self, lives, level, hard):
         current_score = self._score()
-        if (lives <= 0):
+        if (lives < 0):
             return True
         self._lives(lives)
         self._start_game_routine(level)
