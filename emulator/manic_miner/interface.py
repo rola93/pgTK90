@@ -4,15 +4,26 @@ import constants as c
 import math
 import os
 import pdb
+import numpy as np
 
 
 class ManicMiner:
-    def __init__(self, frameskip=1, freccuency_mhz=3.5):
+    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(5, 5, 0, 65)):
         assert isinstance(frameskip, int)
         self.frameskip = frameskip
         dir_path = os.path.dirname(os.path.realpath(__file__))
         sp.initialize(dir_path + '/ManicMiner.z80', iterruption_freccuency_mhz=freccuency_mhz)
         self._skip_bug()
+        # Observation = 256 * 192 * 3
+        l = 256
+        w = 192
+        self.right_crop = crop[0]
+        self.left_crop = l - crop[1]
+        self.up_crop = crop[2]
+        self.down_crop = w - crop[3]
+
+        assert crop[0] + crop[1] <= l and 0 <= crop[0] <= l and 0 <= crop[1] <= l
+        assert crop[2] + crop[3] <= w and 0 <= crop[0] <= w and 0 <= crop[1] <= w
 
     def step(self, action):
         initial_score = self._score()
@@ -33,7 +44,7 @@ class ManicMiner:
         else:
             reward = self._score() - initial_score
 
-        obs = sp.get_frame_as_array()
+        obs = sp.get_frame_as_array()[self.right_crop:self.left_crop, self.up_crop:self.down_crop, :]
 
         info = {
             "air": self._air(),
@@ -60,7 +71,9 @@ class ManicMiner:
             sp.load_state(checkpoint)
         else:
             self._reset(lives, level, True)
-        return sp.get_frame_as_array()  # observation
+
+        # cropped observation
+        return sp.get_frame_as_array()[self.right_crop:self.left_crop, self.up_crop:self.down_crop, :]
 
     def _reset(self, lives, level, hard):
         current_score = self._score()
