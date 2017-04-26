@@ -51,7 +51,7 @@ args = parser.parse_args()
 # Get the environment and extract the number of actions.
 
 # CHANGED: env = gym.make(args.env_name)
-env = ManicMiner(frameskip=2, freccuency_mhz=3.5)
+env = ManicMiner(frameskip=2, freccuency_mhz=1.3)
 
 np.random.seed(123)
 # CHANGED: env.seed(123)
