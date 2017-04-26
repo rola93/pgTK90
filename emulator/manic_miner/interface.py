@@ -6,7 +6,6 @@ import os
 import pdb
 import numpy as np
 
-
 class ManicMiner:
     def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(5, 5, 0, 65)):
         assert isinstance(frameskip, int)
@@ -25,12 +24,25 @@ class ManicMiner:
         assert crop[0] + crop[1] <= l and 0 <= crop[0] <= l and 0 <= crop[1] <= l
         assert crop[2] + crop[3] <= w and 0 <= crop[0] <= w and 0 <= crop[1] <= w
 
+        self.actual_frame = 0
+        self.colors = [
+            1, # blue
+            14 # normal
+            # 4, # verde
+            # 3, # violeta
+            # 6, # amarillo
+            # 5 # celeste
+        ]
+
+        self.actual_frame = 0
+
     def step(self, action):
+        self.actual_frame += self.frameskip
         initial_score = self._score()
         initial_level = self._level()
         sp.put_key(action)
         done = False
-        for _ in range(self.frameskip):
+        for _ in range(self.frameskip + 1):
             sp.execute()
             if self._willy_died():
                 break
@@ -44,7 +56,6 @@ class ManicMiner:
         else:
             reward = self._score() - initial_score
 
-        obs = sp.get_frame_as_array()[self.right_crop:self.left_crop, self.up_crop:self.down_crop, :]
 
         info = {
             "air": self._air(),
@@ -53,6 +64,7 @@ class ManicMiner:
             "current_level": self._level(),
             "change_level": False
         }
+        
         if initial_level != self._level():
             # Paso de nivel
             info["change_level"] = True
@@ -60,6 +72,10 @@ class ManicMiner:
             current_score = self._score()
             self._score(current_score + reward)
             self._reset(self._lives(), self._level(), False)
+
+        self.change_portal_color()
+
+        obs = sp.get_frame_as_array()[self.right_crop:self.left_crop, self.up_crop:self.down_crop, :]
 
         return obs, reward, done, info
 
@@ -73,6 +89,7 @@ class ManicMiner:
             self._reset(lives, level, True)
 
         # cropped observation
+        self.change_portal_color()
         return sp.get_frame_as_array()[self.right_crop:self.left_crop, self.up_crop:self.down_crop, :]
 
     def _reset(self, lives, level, hard):
@@ -212,3 +229,34 @@ class ManicMiner:
 
     def load_state(self, path='state_dump'):
         sp.load_state(path)
+
+    def poke(self, position, value=None):
+        if value == None:
+            return em.mem[position]
+        else:
+            em.mem[position] = value
+            return
+
+    def rerender(self):
+        sp.get_frame_as_array()
+        sp.render()
+        return
+
+    def memory_dump(self):
+        return copy.deepcopy(em.mem)
+
+    def change_portal_color(self):
+        if self._level() == 0:
+            if self.poke(33836) == 53: # no more keys to collect
+                portal_dirs = [22973, 22974, 23005, 23006]
+
+                new_color = self.colors[(self.actual_frame // 4) % 2]
+
+                for portal_dir in portal_dirs:
+                    self.poke(portal_dir, new_color)
+
+                self.actual_frame += self.frameskip
+
+# 0        8        16       24      32        40      48
+# |        |        |        |        |        |        |
+#     0         1        2        3       0         1 
