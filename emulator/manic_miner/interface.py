@@ -70,7 +70,8 @@ class ManicMiner:
 
     def reset(self, lives=0, level=0, checkpoint=None):
         if checkpoint:
-            sp.load_state(checkpoint)
+            checkpoint_state = sp.load_array_state_from_file(checkpoint)
+            sp.load_array_state(checkpoint_state)
         else:
             self._reset(lives, level, True)
 

@@ -1,7 +1,7 @@
 from emulator.manic_miner import ManicMiner
 from scipy.misc import imsave
 
-folder = 'checkpointss'
+folder = 'checkpoints'
 saved = 0
 
 print('''
@@ -53,7 +53,7 @@ for episode in xrange(20):
         elif command == 'e':
             action = 'RIGHTUP'
         elif command == 'p':
-            #imsave('checkpoints/{}.jpg'.format(saved), obs)
+            imsave('checkpoints/{}.jpg'.format(saved), obs)
             manic_miner.save_state('{}/{}'.format(folder, saved))
             print("Saved checkpoint #{}".format(saved))
             saved += 1
