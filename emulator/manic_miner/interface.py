@@ -1,10 +1,8 @@
 import py_zx.Z80 as em
 import py_zx.spectrum as sp
 import constants as c
-import math
 import os
-import pdb
-import numpy as np
+
 
 class ManicMiner:
     def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(5, 5, 0, 45)):
@@ -12,7 +10,11 @@ class ManicMiner:
         self.frameskip = frameskip
         dir_path = os.path.dirname(os.path.realpath(__file__))
         sp.initialize(dir_path + '/ManicMiner.z80', iterruption_freccuency_mhz=freccuency_mhz)
-        self._skip_bug()
+
+        self.level0 = sp.load_array_state_from_file('levels/0')
+        self.load_level0()
+
+        #self._skip_bug()
         # Observation = 256 * 192 * 3
         l = 256
         w = 192
@@ -84,7 +86,8 @@ class ManicMiner:
 
     def reset(self, lives=0, level=0, checkpoint=None):
         if checkpoint:
-            sp.load_state(checkpoint)
+            checkpoint_state = sp.load_array_state_from_file(checkpoint)
+            sp.load_array_state(checkpoint_state)
         else:
             self._reset(lives, level, True)
 
@@ -102,6 +105,10 @@ class ManicMiner:
         sp.execute()
         sp.execute()
         sp.execute()
+        sp.execute()
+        sp.execute()
+        sp.execute()
+
         if (not hard):
             self._score(current_score)
         return False
@@ -114,9 +121,6 @@ class ManicMiner:
 
     def close(self):
         return sp.close()
-
-    def save_state(path):
-        sp.save_state(path)
 
     def _score(self, new_score=None):
         # se toma en cuenta los digitos de overflow que no se ven en pantalla
@@ -208,7 +212,7 @@ class ManicMiner:
         sp.put_key("NOOP")
 
         input_var = "ENTER"
-        for j in xrange(240):
+        for j in xrange(262):
             sp.execute()
             sp.put_key(input_var)
 
@@ -225,10 +229,14 @@ class ManicMiner:
         return portal, willy
 
     def save_state(self, path='state_dump'):
-        sp.save_state(path)
+        sp.save_array_state(path)
 
     def load_state(self, path='state_dump'):
-        sp.load_state(path)
+        loaded_data = sp.load_array_state_from_file(path)
+        sp.load_array_state(loaded_data)
+
+    def load_level0(self):
+        sp.load_array_state(self.level0)
 
     def poke(self, position, value=None):
         if value == None:
@@ -256,7 +264,3 @@ class ManicMiner:
                     self.poke(portal_dir, new_color)
 
                 self.actual_frame += self.frameskip
-
-# 0        8        16       24      32        40      48
-# |        |        |        |        |        |        |
-#     0         1        2        3       0         1 
