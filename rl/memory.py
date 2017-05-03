@@ -5,6 +5,7 @@ import random
 
 import numpy as np
 from copy import deepcopy
+from rl.sum_tree import SumTree
 
 
 # This is to be understood as a transition: Given `state0`, performing `action`
@@ -59,6 +60,8 @@ class RingBuffer(object):
             # This should never happen.
             raise RuntimeError()
         self.data[(self.start + self.length - 1) % self.maxlen] = v
+        # return index where element was saved. Not so clean :/
+        return (self.start + self.length - 1) % self.maxlen
 
 
 def zeroed_observation(observation):
@@ -113,6 +116,7 @@ class Memory(object):
             'ignore_episode_boundaries': self.ignore_episode_boundaries,
         }
         return config
+
 
 class SequentialMemory(Memory):
     def __init__(self, limit, **kwargs):
@@ -240,5 +244,126 @@ class EpisodeParameterMemory(Memory):
 
     def get_config(self):
         config = super(SequentialMemory, self).get_config()
+        config['limit'] = self.limit
+        return config
+
+
+class PrioritizedMemory(Memory):
+
+    def __init__(self, limit, a=0.6, e=0.01, **kwargs):
+        super(PrioritizedMemory, self).__init__(**kwargs)
+        self.tree = SumTree(limit)
+        self.a = a
+        self.e = e
+        self.limit = limit
+        # Do not use deque to implement the memory. This data structure may seem convenient but
+        # it is way too slow on random access. Instead, we use our own ring buffer implementation.
+        self.actions = RingBuffer(limit)
+        self.rewards = RingBuffer(limit)
+        self.terminals = RingBuffer(limit)
+        self.observations = RingBuffer(limit)
+
+    def _get_priority(self, error):
+        return (error + self.e) ** self.a
+
+    def _add_item(self, error, item):
+        p = self._get_priority(error)
+        self.tree.add(p, item)
+
+    def _sample_indexes(self, batch_size=32, low=0, high=100):
+        batch = []
+        segment = self.tree.total() / batch_size
+
+        for i in xrange(batch_size):
+            a = segment * i
+            b = segment * (i + 1)
+
+            s = random.uniform(a, b)
+            (idx, p, data) = self.tree.get(s)
+            while data < low or data >= high:
+                s = random.uniform(a, b)
+                (idx, p, data) = self.tree.get(s)
+            batch.append(data)
+
+        assert len(batch) == batch_size
+        # previous version add 1 to array, don't know why :/
+        return np.array(batch) + 1
+
+    def _update(self, idx, error):
+        p = self._get_priority(error)
+        self.tree.update(idx, p)
+
+    def sample(self, batch_size, batch_idxs=None):
+
+        batch_idxs = self._sample_indexes(batch_size, high=self.nb_entries - 1)
+
+        assert np.min(batch_idxs) >= 1
+        assert np.max(batch_idxs) < self.nb_entries
+        assert len(batch_idxs) == batch_size
+
+        # Create experiences
+        experiences = []
+        for idx in batch_idxs:
+            terminal0 = self.terminals[idx - 2] if idx >= 2 else False
+            while terminal0:
+                # Skip this transition because the environment was reset here. Select a new, random
+                # transition and use this instead. This may cause the batch to contain the same
+                # transition twice.
+                idx = self._sample_indexes(1, high=self.nb_entries - 1)[0]
+                terminal0 = self.terminals[idx - 2] if idx >= 2 else False
+            assert 1 <= idx < self.nb_entries
+
+            # This code is slightly complicated by the fact that subsequent observations might be
+            # from different episodes. We ensure that an experience never spans multiple episodes.
+            # This is probably not that important in practice but it seems cleaner.
+            state0 = [self.observations[idx - 1]]
+            for offset in range(0, self.window_length - 1):
+                current_idx = idx - 2 - offset
+                current_terminal = self.terminals[current_idx - 1] if current_idx - 1 > 0 else False
+                if current_idx < 0 or (not self.ignore_episode_boundaries and current_terminal):
+                    # The previously handled observation was terminal, don't add the current one.
+                    # Otherwise we would leak into a different episode.
+                    break
+                state0.insert(0, self.observations[current_idx])
+            while len(state0) < self.window_length:
+                # state0.insert(0, zeroed_observation(state0[0]))
+                state0.insert(0, deepcopy(state0[0]))
+            action = self.actions[idx - 1]
+            reward = self.rewards[idx - 1]
+            terminal1 = self.terminals[idx - 1]
+
+            # Okay, now we need to create the follow-up state. This is state0 shifted on timestep
+            # to the right. Again, we need to be careful to not include an observation from the next
+            # episode if the last state is terminal.
+            state1 = [np.copy(x) for x in state0[1:]]
+            state1.append(self.observations[idx])
+
+            assert len(state0) == self.window_length
+            assert len(state1) == len(state0)
+            experiences.append(Experience(state0=state0, action=action, reward=reward,
+                                          state1=state1, terminal1=terminal1))
+        assert len(experiences) == batch_size
+        return experiences
+
+    def append(self, observation, action, reward, terminal, training=True, error=1):
+        super(PrioritizedMemory, self).append(observation, action, reward, terminal, training=training)
+
+        # This needs to be understood as follows: in `observation`, take `action`, obtain `reward`
+        # and weather the next state is `terminal` or not.
+        if training:
+            observation_index = self.observations.append(observation)
+            self.actions.append(action)
+            self.rewards.append(reward)
+            self.terminals.append(terminal)
+            # up to this point is the same as in SequentialMemory, now add observation_index to PER
+            self._add_item(error, observation_index)
+
+
+    @property
+    def nb_entries(self):
+        return len(self.observations)
+
+    def get_config(self):
+        config = super(PrioritizedMemory, self).get_config()
         config['limit'] = self.limit
         return config

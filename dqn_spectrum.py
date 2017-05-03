@@ -14,7 +14,7 @@ import keras.backend as K
 
 from rl.agents.dqn import DQNAgent
 from rl.policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy
-from rl.memory import SequentialMemory
+from rl.memory import SequentialMemory, PrioritizedMemory
 from rl.core import Processor
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 
@@ -83,7 +83,7 @@ print(model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
-memory = SequentialMemory(limit=1000000, window_length=WINDOW_LENGTH)
+memory = PrioritizedMemory(limit=1000000, window_length=WINDOW_LENGTH)
 processor = SpectrumProcessor()
 
 # Select a policy. We use eps-greedy action selection, which means that a random action is selected
@@ -101,7 +101,7 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=10000,
+               processor=processor, nb_steps_warmup=100, gamma=.99, target_model_update=10000,
                train_interval=4, delta_clip=1., enable_double_dqn=False, enable_dueling_network=False)
 dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
