@@ -5,7 +5,7 @@ import os
 
 
 class ManicMiner:
-    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(5, 5, 0, 45)):
+    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0)):
         assert isinstance(frameskip, int)
         self.frameskip = frameskip
         dir_path = os.path.dirname(os.path.realpath(__file__))

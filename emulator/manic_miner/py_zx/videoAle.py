@@ -1,6 +1,6 @@
 import Z80
 import numpy as np
-from gym.envs.classic_control import rendering
+# from gym.envs.classic_control import rendering
 
 
 xscale = 1
@@ -62,7 +62,7 @@ class VideoArray:
 
 def init():
     global video_array, viewer
-    viewer = rendering.SimpleImageViewer()
+    # viewer = rendering.SimpleImageViewer()
     video_array = VideoArray()
     return
 
@@ -121,14 +121,14 @@ def get_frame_as_array():
     return video_array.get_image()
 
 def update(mode='human'):
-    global viewer
+    # global viewer
     img = get_frame_as_array()
     if mode == 'rgb_array':
         return img
-    elif mode == 'human':
-        from gym.envs.classic_control import rendering
-        viewer.imshow(img)
+    # elif mode == 'human':
+    #     from gym.envs.classic_control import rendering
+    #     viewer.imshow(img)
 
-def close():
-    global viewer
-    viewer.close()
+# def close():
+#     global viewer
+#     viewer.close()

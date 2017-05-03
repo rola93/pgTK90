@@ -1,5 +1,3 @@
-import video
-
 tstatesPerInterrupt = 0
 
 #Service for Python limitations
@@ -410,8 +408,6 @@ def inb2( port ):
 		#print 'inb'
 		return 0xff;
 
-#Keyboard-------------------------------------------
-import keyboard
 global keys_vector
 
 def inb( port ):
@@ -447,11 +443,6 @@ def put_key(k):
 
     if k == 'RIGHT' or k == 'RIGHTUP':
         keys_vector[3] -= 4
-
-video_update_time = 0
-
-def render():
-	video.update()
 
 # Z80 fetch/execute loop 
 def execute():

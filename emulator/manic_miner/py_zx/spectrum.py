@@ -4,8 +4,8 @@ import pickle
 import copy
 
 #comentar o descomentar segun sistema operativo
-import video as video #run on ubuntu
-#import videoAle as video #run on mac
+#import video as video #run on ubuntu
+import videoAle as video #run on mac
 
 def execute():
 	Z80.execute()
