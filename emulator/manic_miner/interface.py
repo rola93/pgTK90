@@ -99,6 +99,27 @@ class ManicMiner:
         current_score = self._score()
         if (lives < 0):
             return True
+        if level == 0:
+            self.load_level0()
+        self._lives(lives)
+        if level != 0:
+            self._start_game_routine(level)
+            sp.put_key("NOOP")
+            sp.execute()
+            sp.execute()
+            sp.execute()
+            sp.execute()
+            sp.execute()
+            sp.execute()
+
+        if (not hard):
+            self._score(current_score)
+        return False
+
+    def _reset_old(self, lives, level, hard):
+        current_score = self._score()
+        if (lives < 0):
+            return True
         self._lives(lives)
         self._start_game_routine(level)
         sp.put_key("NOOP")
