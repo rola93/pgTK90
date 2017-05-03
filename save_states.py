@@ -4,7 +4,7 @@ from pdb import set_trace
 
 folder = 'checkpoints'
 lives = 0
-frameskip = 2
+frameskip = 4
 saved = 0
 starting_number = None
 
@@ -34,7 +34,7 @@ Enjoy! ;)
 
 first_episode = True
 
-manic_miner = ManicMiner(frameskip=frameskip)
+manic_miner = ManicMiner(frameskip=frameskip, freccuency_mhz=1.3)
 print("\n")
 
 for episode in xrange(20):
@@ -43,7 +43,7 @@ for episode in xrange(20):
     else:
         print("Reseting enviroment.")
         first_episode = False
-    manic_miner.reset(lives=lives)
+    manic_miner.load_level0() # COM: why not .reset(lives=lives)
     manic_miner.render()
     done = False
     print("episode: {}".format(episode))
@@ -66,7 +66,7 @@ for episode in xrange(20):
             if starting_number == None:
                 starting_number = raw_input('From which number do you want to start saving? [0, 5, 11, ...]:')
                 saved = int(starting_number)
-            imsave('checkpoints/{}.jpg'.format(saved), obs)
+            imsave('{}/{}.jpg'.format(folder, saved), obs)
             manic_miner.save_state('{}/{}'.format(folder, saved))
             print("Saved checkpoint #{}".format(saved))
             saved += 1
@@ -82,7 +82,7 @@ for episode in xrange(20):
             manic_miner.close()
             exit()
         elif command == 'n': 
-            print("Finish breakpoint with the command c")
+            print("Finish breakpoint with the command 'c':")
             set_trace()
         else:
             action = 'NOOP'

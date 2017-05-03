@@ -1,6 +1,7 @@
 import sys, os
 import Z80, load
-import numpy as np
+import pickle
+import copy
 
 #comentar o descomentar segun sistema operativo
 import video as video #run on ubuntu
@@ -45,88 +46,95 @@ def _load_rom(romfile):
 		Z80.mem[index] = (op+256)&0xff
 	print 'Loaded %d bytes of ROM' % (len(rom))
 
-def save_state(path='state_dump'):
-	f = open(path, 'w')
+def save_array_state(path=None):
+	core_state = []
 	# **Main registers
-	f.write(str(Z80._A) + str('\n'))
-	f.write(str(Z80._HL) + str('\n'))
-	f.write(str(Z80._B) + str('\n'))
-	f.write(str(Z80._C) + str('\n'))
-	f.write(str(Z80._DE) + str('\n'))
-	f.write(str(Z80.fS) + str('\n'))
-	f.write(str(Z80.fZ) + str('\n'))
-	f.write(str(Z80.f5) + str('\n'))
-	f.write(str(Z80.fH) + str('\n'))
-	f.write(str(Z80.f3) + str('\n'))
-	f.write(str(Z80.fPV) + str('\n'))
-	f.write(str(Z80.fN) + str('\n'))
-	f.write(str(Z80.fC) + str('\n'))
+	core_state.append(Z80._A)#0
+	core_state.append(Z80._HL)#1
+	core_state.append(Z80._B)#2
+	core_state.append(Z80._C)#3
+	core_state.append(Z80._DE)#4
+	core_state.append(Z80.fS)#5
+	core_state.append(Z80.fZ)#6
+	core_state.append(Z80.f5)#7
+	core_state.append(Z80.fH)#8
+	core_state.append(Z80.f3)#9
+	core_state.append(Z80.fPV)#10
+	core_state.append(Z80.fN)#11
+	core_state.append(Z80.fC)#12
 	# ** Alternate registers
-	f.write(str(Z80._AF_) + str('\n'))
-	f.write(str(Z80._HL_) + str('\n'))
-	f.write(str(Z80._BC_) + str('\n'))
-	f.write(str(Z80._DE_) + str('\n'))
+	core_state.append(Z80._AF_)#13
+	core_state.append(Z80._HL_)#14
+	core_state.append(Z80._BC_)#15
+	core_state.append(Z80._DE_)#16
 	# ** Index registers - ID used as temporary for ix/iy
-	f.write(str(Z80._IX) + str('\n'))
-	f.write(str(Z80._IY) + str('\n'))
-	f.write(str(Z80._ID) + str('\n'))
+	core_state.append(Z80._IX)#17
+	core_state.append(Z80._IY)#18
+	core_state.append(Z80._ID)#19
 	# ** Stack Pointer and Program Counter
-	f.write(str(Z80._SP) + str('\n'))
-	f.write(str(Z80._PC) + str('\n'))
+	core_state.append(Z80._SP)#20
+	core_state.append(Z80._PC)#21
 	# ** Interrupt and Refresh registers
-	f.write(str(Z80._I) + str('\n'))
-	f.write(str(Z80._R) + str('\n'))
-	f.write(str(Z80._R7) + str('\n'))
+	core_state.append(Z80._I)#22
+	core_state.append(Z80._R)#23
+	core_state.append(Z80._R7)#24
 	# ** Interrupt flip-flops
-	f.write(str(Z80._IFF1) + str('\n'))
-	f.write(str(Z80._IFF2) + str('\n'))
-	f.write(str(Z80._IM) + str('\n'))
-	# ** Memory
-	x =np.array(Z80.mem)
-	np.savetxt(path + '_mem', x)
-	#mem = [0] * 65536
-	f.close()
+	core_state.append(Z80._IFF1)#25
+	core_state.append(Z80._IFF2)#26
+	core_state.append(Z80._IM)#27
 
-def load_state(path):
+	# ** Memory
+	core_state.append(Z80.mem)#28
+
+	if path:
+		with open(path, "wb") as fp:  # Pickling
+			pickle.dump(core_state, fp)
+
+	return core_state
+
+
+def load_array_state_from_file(path='state_dump'):
+	with open(path, "rb") as fp:  # Unpickling
+		b = pickle.load(fp)
+	return  b
+
+def load_array_state(core_state_read_only):
 	# global _A, _HL, _B, _C,_DE, fS, fZ,f5, fH,f3,fPV,fN,fC,_AF_,\
 	#     _HL_,_BC_,_DE_, _IX, _IY, _ID,_SP,_PC,_I, _R, _R7,_IFF1,_IFF2,_IM, mem
-	f = open(path, 'r')
-	l =f.readlines()
 	# **Main registers
-	Z80._A = int(l[0])
-	Z80._HL = int(l[1])
-	Z80._B = int(l[2])
-	Z80._C = int(l[3])
-	Z80._DE = int(l[4])
-	Z80.fS = l[5]== 'True'
-	Z80.fZ = l[6]== 'True'
-	Z80.f5 = l[7]== 'True'
-	Z80.fH = l[8]== 'True'
-	Z80.f3 = l[9]== 'True'
-	Z80.fPV =l[10]== 'True'
-	Z80.fN = l[11]== 'True'
-	Z80.fC = l[12]== 'True'
+	core_state = copy.deepcopy(core_state_read_only)
+	Z80._A = core_state[0]
+	Z80._HL = core_state[1]
+	Z80._B = core_state[2]
+	Z80._C = core_state[3]
+	Z80._DE = core_state[4]
+	Z80.fS = core_state[5]
+	Z80.fZ = core_state[6]
+	Z80.f5 = core_state[7]
+	Z80.fH = core_state[8]
+	Z80.f3 = core_state[9]
+	Z80.fPV = core_state[10]
+	Z80.fN = core_state[11]
+	Z80.fC = core_state[12]
 	# ** Alternate registers
-	Z80._AF_ = int(l[13])
-	Z80._HL_ = int(l[14])
-	Z80._BC_ = int(l[15])
-	Z80._DE_ = int(l[16])
+	Z80._AF_ = core_state[13]
+	Z80._HL_ = core_state[14]
+	Z80._BC_ = core_state[15]
+	Z80._DE_ = core_state[16]
 	# ** Index registers - ID used as temporary for ix/iy
-	Z80._IX = int(l[17])
-	Z80._IY = int(l[18])
-	Z80._ID = int(l[19])
+	Z80._IX = core_state[17]
+	Z80._IY = core_state[18]
+	Z80._ID = core_state[19]
 	# ** Stack Pointer and Program Counter
-	Z80._SP = int(l[20])
-	Z80._PC = int(l[21])
+	Z80._SP = core_state[20]
+	Z80._PC = core_state[21]
 	# ** Interrupt and Refresh registers
-	Z80._I = int(l[22])
-	Z80._R = int(l[23])
-	Z80._R7 = int(l[24])
+	Z80._I = core_state[22]
+	Z80._R = core_state[23]
+	Z80._R7 = core_state[24]
 	# ** Interrupt flip-flops
-	Z80._IFF1 = l[25] == 'True'
-	Z80._IFF2 = l[26] == 'True'
-	Z80._IM = int(l[27])
+	Z80._IFF1 = core_state[25]
+	Z80._IFF2 = core_state[26]
+	Z80._IM = core_state[27]
 	# ** Memory
-	x= np.loadtxt(path + '_mem')
-	Z80.mem = x.astype(int)
-	f.close()
+	Z80.mem = (core_state[28])
