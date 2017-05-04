@@ -11,8 +11,9 @@ class ManicMiner:
         dir_path = os.path.dirname(os.path.realpath(__file__))
         sp.initialize(dir_path + '/ManicMiner.z80', iterruption_freccuency_mhz=freccuency_mhz)
 
-        self.level0 = sp.load_array_state_from_file('levels/0')
-        self.load_level0()
+        self.levels = [None for _ in xrange(20)]
+        # self.level0 = sp.load_array_state_from_file('levels/0')
+        # self.load_level0()
 
         #self._skip_bug()
         # Observation = 256 * 192 * 3
@@ -99,20 +100,9 @@ class ManicMiner:
         current_score = self._score()
         if (lives < 0):
             return True
-        if level == 0:
-            self.load_level0()
+        self.load_level(level)
         self._lives(lives)
-        if level != 0:
-            self._start_game_routine(level)
-            sp.put_key("NOOP")
-            sp.execute()
-            sp.execute()
-            sp.execute()
-            sp.execute()
-            sp.execute()
-            sp.execute()
-
-        if (not hard):
+        if not hard:
             self._score(current_score)
         return False
 
@@ -256,8 +246,11 @@ class ManicMiner:
         loaded_data = sp.load_array_state_from_file(path)
         sp.load_array_state(loaded_data)
 
-    def load_level0(self):
-        sp.load_array_state(self.level0)
+    def load_level(self, level=0):
+        assert 0 <= level <= 20
+        if not self.levels[level]:
+            self.levels[level] = sp.load_array_state_from_file('levels/{}'.format(level))
+        sp.load_array_state(self.levels[level])
 
     def poke(self, position, value=None):
         if value == None:

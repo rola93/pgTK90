@@ -43,7 +43,7 @@ for episode in xrange(20):
     else:
         print("Reseting enviroment.")
         first_episode = False
-    manic_miner.load_level0() # COM: why not .reset(lives=lives)
+    manic_miner.reset()
     manic_miner.render()
     done = False
     print("episode: {}".format(episode))

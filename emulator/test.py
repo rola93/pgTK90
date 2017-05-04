@@ -5,7 +5,7 @@ from scipy.misc import imsave
 manic_miner = ManicMiner(frameskip=1, freccuency_mhz=3.5)
 j=0
 for episode in xrange(200):
-    obs = manic_miner.reset(lives=1)
+    obs = manic_miner.reset(lives=0)
     manic_miner.render()
     done = False
     # print("episode: {}".format(episode))
@@ -17,7 +17,7 @@ for episode in xrange(200):
             print 'guardando episodio ', episode, ' j = ', j
             imsave('test/{}.jpg'.format(str(episode) + '_' + str(j)), obs)
         # scipy.misc.imsave('replay/{}.jpg'.format(steps), obs)
-        # manic_miner.render()
+        manic_miner.render()
 print 'guardando episodio 199 j = ', j
 imsave('test/{}.jpg'.format(str(199) + '_' + str(j)), obs)
 print "Final del experimento"
