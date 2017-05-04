@@ -9,24 +9,9 @@ class ManicMiner:
         assert isinstance(frameskip, int)
         self.frameskip = frameskip
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        sp.initialize(dir_path + '/ManicMiner.z80', iterruption_freccuency_mhz=freccuency_mhz)
+        sp.initialize(dir_path + '/ManicMiner.z80', iterruption_freccuency_mhz=freccuency_mhz, crop=crop)
 
         self.levels = [None for _ in xrange(20)]
-        # self.level0 = sp.load_array_state_from_file('levels/0')
-        # self.load_level0()
-
-        #self._skip_bug()
-        # Observation = 256 * 192 * 3
-        l = 256
-        w = 192
-        self.right_crop = crop[0]
-        self.left_crop = l - crop[1]
-        self.up_crop = crop[2]
-        self.down_crop = w - crop[3]
-
-        assert crop[0] + crop[1] <= l and 0 <= crop[0] <= l and 0 <= crop[1] <= l
-        assert crop[2] + crop[3] <= w and 0 <= crop[0] <= w and 0 <= crop[1] <= w
-
         self.actual_frame = 0
         self.colors = [
             1, # blue
@@ -50,7 +35,6 @@ class ManicMiner:
             if self._willy_died():
                 break
 
-        reward = 0.
         # Is not discounting air. Im might help.
         if self._willy_died():
             # Doubt with the line below
@@ -78,8 +62,7 @@ class ManicMiner:
 
         self.change_portal_color()
 
-        obs = sp.get_frame_as_array()[self.right_crop:self.left_crop, self.up_crop:self.down_crop, :]
-
+        obs = sp.get_frame_as_array()
         return obs, reward, done, info
 
     def render(self, mode='human'):
@@ -94,7 +77,7 @@ class ManicMiner:
 
         # cropped observation
         self.change_portal_color()
-        return sp.get_frame_as_array()[self.right_crop:self.left_crop, self.up_crop:self.down_crop, :]
+        return sp.get_frame_as_array()
 
     def _reset(self, lives, level, hard):
         current_score = self._score()

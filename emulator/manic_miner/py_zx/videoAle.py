@@ -49,6 +49,12 @@ attr_start = 22528
 attr_end = 23295
 nameCount = 1
 
+# don't crop anything by default
+right_crop = 0
+left_crop = nPixelsWide
+up_crop = 0
+down_crop = nPixelsHigh
+
 class VideoArray:
     def __init__(self):
         self.image_array = np.empty((192, 256, 3), dtype=np.uint8)
@@ -60,10 +66,19 @@ class VideoArray:
         return self.image_array
 
 
-def init():
-    global video_array, viewer
+def init(crop=None):
+    global video_array, viewer, right_crop, left_crop, up_crop, down_crop
     viewer = rendering.SimpleImageViewer()
     video_array = VideoArray()
+    if crop:
+        # (right, left, up, down)
+        right_crop = crop[0]
+        left_crop = nPixelsWide - crop[1]
+        up_crop = crop[2]
+        down_crop = nPixelsHigh - crop[3]
+
+        assert crop[0] + crop[1] <= nPixelsWide and 0 <= crop[0] <= nPixelsWide and 0 <= crop[1] <= nPixelsWide
+        assert crop[2] + crop[3] <= nPixelsHigh and 0 <= crop[0] <= nPixelsHigh and 0 <= crop[1] <= nPixelsHigh
     return
 
 
@@ -118,7 +133,7 @@ def fill_screen_map():
 def get_frame_as_array():
     global video_array
     fill_screen_map()
-    return video_array.get_image()
+    return video_array.get_image()[up_crop:down_crop, right_crop:left_crop, :]
 
 def update(mode='human'):
     global viewer

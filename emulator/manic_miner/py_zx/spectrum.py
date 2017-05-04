@@ -5,7 +5,7 @@ import copy
 
 #comentar o descomentar segun sistema operativo
 import video as video #run on ubuntu
-#import videoAle as video #run on mac
+# import videoAle as video #run on mac
 
 def execute():
 	Z80.execute()
@@ -26,8 +26,8 @@ def program_counter(value):
 def get_frame_as_array():
 	return video.get_frame_as_array()
 
-def initialize(game_romfile, iterruption_freccuency_mhz=3.5):
-	video.init()
+def initialize(game_romfile, iterruption_freccuency_mhz=3.5, crop=(0, 0, 0, 0)):
+	video.init(crop=crop)
 	Z80.Z80(iterruption_freccuency_mhz) #MhZ
 	dir_path = os.path.dirname(os.path.realpath(__file__))
 	_load_rom(dir_path + '/48-modified.rom')
