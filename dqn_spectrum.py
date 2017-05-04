@@ -51,7 +51,7 @@ args = parser.parse_args()
 # Get the environment and extract the number of actions.
 
 # CHANGED: env = gym.make(args.env_name)
-env = ManicMiner(frameskip=2, freccuency_mhz=1.3)
+env = ManicMiner(frameskip=2, freccuency_mhz=1.3, crop=(5,5,0,45))
 
 np.random.seed(123)
 # CHANGED: env.seed(123)
@@ -116,10 +116,10 @@ if args.mode == 'train':
     dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000, visualize=False)
 
     # After training is done, we save the final weights one more time.
-    dqn.save_weights(weights_filename, overwrite=True)
+    dqn.save_weights(weights_filename, overwrite=False)
 
     # Finally, evaluate our algorithm for 10 episodes.
-    dqn.test(env, nb_episodes=10, visualize=True)
+    dqn.test(env, nb_episodes=10, visualize=False)
 elif args.mode == 'test':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     if args.weights:
