@@ -43,9 +43,9 @@ class ManicMiner:
             # if self._air() < 0.04:
             #     reward = 0
             # else:
-            reward = -1.
-        else:
-            reward = self._score() - initial_score
+            # reward = -1.
+        # else:
+        reward = self._score() - initial_score
 
 
         info = {
