@@ -9,6 +9,7 @@ for episode in xrange(200):
     manic_miner.render()
     done = False
     # print("episode: {}".format(episode))
+    last_reward = None
     while not done:
         j += 1
         action = random.choice(manic_miner.actions())
@@ -16,8 +17,12 @@ for episode in xrange(200):
         if j % 100 == 0 or j % 100 == 1:
             print 'guardando episodio ', episode, ' j = ', j
             imsave('test/{}.jpg'.format(str(episode) + '_' + str(j)), obs)
+        if reward != last_reward:
+            print 'Cambio en recompenza: ', episode, ' j = ', j, 'reward: ', reward
+            imsave('test/rw_{}.jpg'.format(str(reward) + '_' + str(episode) + '_' + str(j)), obs)
         # scipy.misc.imsave('replay/{}.jpg'.format(steps), obs)
         manic_miner.render()
+        last_reward = reward
 print 'guardando episodio 199 j = ', j
 imsave('test/{}.jpg'.format(str(199) + '_' + str(j)), obs)
 print "Final del experimento"
