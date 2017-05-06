@@ -12,7 +12,7 @@ for episode in xrange(200):
     last_reward = None
     while not done:
         j += 1
-        action = random.choice(manic_miner.actions())
+        action = random.choice(manic_miner.actions() + ['RIGHT', 'LEFT', 'RIGHT', 'LEFT', 'NOOP', 'RIGHT', 'LEFT', 'NOOP'])
         obs, reward, done, info = manic_miner.step(action)
         if j % 100 == 0 or j % 100 == 1:
             print 'guardando episodio ', episode, ' j = ', j

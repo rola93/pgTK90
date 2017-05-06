@@ -39,6 +39,10 @@ class ManicMiner:
         if self._willy_died():
             # Doubt with the line below
             done = self._reset(self._lives() - 1, self._level(), False)
+            # died without air
+            # if self._air() < 0.04:
+            #     reward = 0
+            # else:
             reward = -1.
         else:
             reward = self._score() - initial_score
