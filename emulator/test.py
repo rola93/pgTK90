@@ -6,6 +6,7 @@ manic_miner = ManicMiner(frameskip=1, freccuency_mhz=3.5)
 j=0
 for episode in xrange(200):
     obs = manic_miner.reset(lives=0)
+    manic_miner.reset(checkpoint='checkpoints/11')
     manic_miner.render()
     done = False
     # print("episode: {}".format(episode))
