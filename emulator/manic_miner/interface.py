@@ -150,6 +150,9 @@ class ManicMiner:
             a = mem[c.D_MANIC_MINER_LIVES]
             return int(a)
 
+    def get_air(self):
+        return self._air()
+
     def _air(self, air=None):
         # value ranges from 36 to 63
         if air != None:
