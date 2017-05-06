@@ -21,7 +21,7 @@ for episode in xrange(200):
         # if reward != last_reward:
         #     print 'Cambio en recompenza: ', episode, ' j = ', j, 'reward: ', reward
         air = manic_miner.get_air()
-        imsave('test/rw_{}.jpg'.format(str(episode) + '-' + str(j) + '-' + action + '-rew=' + str(reward) + '-air=' + str(air)), obs)
+        imsave('test/rw_{}.jpg'.format(str(j) + '-' + str(episode) + '-' + action + '-rew=' + str(reward) + '-air=' + str(air)), obs)
         # scipy.misc.imsave('replay/{}.jpg'.format(steps), obs)
         # manic_miner.render()
         # last_reward = reward
