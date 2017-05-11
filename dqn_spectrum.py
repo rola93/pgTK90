@@ -54,8 +54,8 @@ args = parser.parse_args()
 env = ManicMiner(frameskip=2, freccuency_mhz=1.3, crop=(5,5,0,55))
 
 np.random.seed(123)
-# CHANGED: env.seed(123)
-nb_actions = len(env.actions())
+env.seed(123)
+nb_actions = env.action_space.n
 
 # Next, we build our model. We use the same model that was described by Mnih et al. (2015).
 input_shape = (WINDOW_LENGTH,) + INPUT_SHAPE
@@ -113,16 +113,16 @@ if args.mode == 'train':
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
     callbacks += [FileLogger(log_filename, interval=100)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000, visualize=False)
+    dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000, nb_max_start_steps =30, visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=False)
 
     # Finally, evaluate our algorithm for 10 episodes.
-    dqn.test(env, nb_episodes=10, visualize=True)
+    dqn.test(env, nb_episodes=10, nb_max_start_steps =30, visualize=True)
 elif args.mode == 'test':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, visualize=True)
+    dqn.test(env, nb_episodes=10, nb_max_start_steps =30, visualize=True)
