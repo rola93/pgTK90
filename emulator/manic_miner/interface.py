@@ -2,6 +2,7 @@ import py_zx.Z80 as em
 import py_zx.spectrum as sp
 import constants as c
 import os
+from gym import spaces
 
 
 class ManicMiner:
@@ -23,6 +24,12 @@ class ManicMiner:
         ]
 
         self.actual_frame = 0
+        self.action_space = spaces.Discrete(7)
+
+    def seed(self, seed):
+        """Sets the seed for this env's random number generator(s).
+        """
+        spaces.seed(seed)
 
     def step(self, action):
         self.actual_frame += self.frameskip
