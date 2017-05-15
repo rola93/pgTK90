@@ -26,6 +26,10 @@ WINDOW_SIZE = 1
 
 
 def promediar_vector(vector, ventana):
+    if ventana == 1:
+        max_value = np.amax(vector)
+        max_pos = np.argmax(vector)
+        return vector[ventana:-ventana], max_value, max_pos
     res = []
     for i in xrange(ventana, len(vector) - ventana):
         res.append(np.average(vector[i-ventana:i+ventana]))
