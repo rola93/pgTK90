@@ -7,6 +7,7 @@ from keras.callbacks import History
 from rl.callbacks import TestLogger, TrainEpisodeLogger, TrainIntervalLogger, Visualizer, CallbackList
 
 import numpy as np
+import pdb
 np.random.seed(123)
 
 class Agent(object):
@@ -36,15 +37,64 @@ class Agent(object):
         self.processor = processor
         self.training = False
         self.step = 0
+        self.evaluating_states = []
 
     def get_config(self):
         """Configuration of the agent for serialization.
         """
         return {}
 
+    def collect_avarage_q_checkpoints(self, env, avarage_q, starting_checkpoints):            
+        if avarage_q and 'n_evaluations' in avarage_q and 'exponential_landa' in avarage_q:
+            n_evaluations = avarage_q["n_evaluations"]
+            bernoully_p = int(1 / avarage_q["exponential_landa"])
+            observation = None
+            observations = []
+
+            # pdb.set_trace()
+            done = True
+            while n_evaluations > 0:
+                # Experience = namedtuple('Experience', 'state0, action, reward, state1, terminal1')
+
+                if done:
+                    if starting_checkpoints:
+                        checkpoint = np.random.choice(starting_checkpoints)
+                        observation = deepcopy(env.reset(checkpoint=checkpoint))
+                    else:
+                        observation = deepcopy(env.reset())
+
+                    if self.processor is not None:
+                        observation = self.processor.process_observation(observation)
+                    
+                    assert observation is not None
+                    observations = [observation]
+                    done = False
+                
+                else:
+
+                    action = env.action_space.sample()
+                    if self.processor is not None:
+                        action = self.processor.process_action(action)
+                        
+                    observation, reward, done, info = env.step(action)
+                    
+                    observation = deepcopy(observation)
+                    
+                    if self.processor is not None:
+                        observation, reward, done, info = self.processor.process_step(observation, reward, done, info)
+
+                    observations.append(observation)
+
+                    if np.random.randint(bernoully_p) == 0:
+                        state = observations[-self.memory.window_length:]
+                        while len(state) < self.memory.window_length:
+                            state.insert(0, deepcopy(state[0]))
+                        self.evaluating_states.append(state)
+                        n_evaluations -= 1
+
     def fit(self, env, nb_steps, action_repetition=1, callbacks=None, verbose=1,
             visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
-            nb_max_episode_steps=None, starting_checkpoints=[]):
+            nb_max_episode_steps=None, starting_checkpoints=[], avarage_q=None):
         """Trains the agent on the given environment.
 
         # Arguments
@@ -69,6 +119,14 @@ class Agent(object):
             nb_max_episode_steps (integer): Number of steps per episode that the agent performs before
                 automatically resetting the environment. Set to `None` if each episode should run
                 (potentially indefinitely) until the environment signals a terminal state.
+            starting_checkpoints ([string]): starting checkpoints file names from which the enviroment 
+                will start at the begining of every episode. You can create 
+            nb_max_episode_steps (dictionary): provie the options in order to add avarage Q metric to 
+                the log as described at Playing Atari with Deep Reinforcement Learning. Two options are mandatory:
+                    n_evaluations (integer): number of checkpoints to be evaluated and avaraged
+                    exponential_landa (float): exponential parameter from which the checkpoint will be chosen
+                        [the smaller the longer will take to select the checkpoints] 
+
 
         # Returns
             A `keras.callbacks.History` instance that recorded the entire training process.
@@ -113,6 +171,7 @@ class Agent(object):
         episode_step = None
         did_abort = False
         try:
+            self.collect_avarage_q_checkpoints(env, avarage_q, starting_checkpoints)
             while self.step < nb_steps:
                 if observation is None:  # start of a new episode
                     callbacks.on_episode_begin(episode)
@@ -217,9 +276,11 @@ class Agent(object):
                         'episode_reward': episode_reward,
                         'nb_episode_steps': episode_step,
                         'nb_steps': self.step,
+                        'avarage_q': self.compute_avarage_q(self.evaluating_states)
                     }
-                    callbacks.on_episode_end(episode, episode_logs)
 
+                    callbacks.on_episode_end(episode, episode_logs)
+                    print("END")
                     episode += 1
                     observation = None
                     episode_step = None
