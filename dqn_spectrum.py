@@ -119,7 +119,7 @@ if args.mode == 'train':
         log_interval=10000, 
         nb_max_start_steps=30, 
         visualize=False,
-        avarage_q={"n_evaluations": 10, "exponential_landa": 0.1}
+        avarage_q={'n_evaluations': 10, 'bernoulli': 0.1}
     )
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=False)

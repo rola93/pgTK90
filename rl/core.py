@@ -7,7 +7,6 @@ from keras.callbacks import History
 from rl.callbacks import TestLogger, TrainEpisodeLogger, TrainIntervalLogger, Visualizer, CallbackList
 
 import numpy as np
-import pdb
 np.random.seed(123)
 
 class Agent(object):
@@ -44,19 +43,20 @@ class Agent(object):
         """
         return {}
 
-    def collect_avarage_q_checkpoints(self, env, avarage_q, starting_checkpoints):            
-        if avarage_q and 'n_evaluations' in avarage_q and 'exponential_landa' in avarage_q:
-            n_evaluations = avarage_q["n_evaluations"]
-            bernoully_p = int(1 / avarage_q["exponential_landa"])
+    def collect_avarage_q_checkpoints(self, env, avarage_q, starting_checkpoints): 
+        # note that nb_max_start_steps is not used
+        if avarage_q:
+            n_evaluations_left = avarage_q['n_evaluations'] if 'n_evaluations' in avarage_q else 10
+            bernoulli = int(1 / avarage_q['bernoulli']) if 'bernoulli' in avarage_q else 10
             observation = None
             observations = []
 
-            # pdb.set_trace()
             done = True
-            while n_evaluations > 0:
+            while n_evaluations_left > 0:
                 # Experience = namedtuple('Experience', 'state0, action, reward, state1, terminal1')
 
                 if done:
+                    # maintain human checkpoint replay
                     if starting_checkpoints:
                         checkpoint = np.random.choice(starting_checkpoints)
                         observation = deepcopy(env.reset(checkpoint=checkpoint))
@@ -69,15 +69,12 @@ class Agent(object):
                     assert observation is not None
                     observations = [observation]
                     done = False
-                
                 else:
-
-                    action = env.action_space.sample()
+                    action = env.action_space.sample() # Don't need to store action
                     if self.processor is not None:
                         action = self.processor.process_action(action)
                         
                     observation, reward, done, info = env.step(action)
-                    
                     observation = deepcopy(observation)
                     
                     if self.processor is not None:
@@ -85,12 +82,12 @@ class Agent(object):
 
                     observations.append(observation)
 
-                    if np.random.randint(bernoully_p) == 0:
+                    if np.random.randint(bernoulli) == 0:
                         state = observations[-self.memory.window_length:]
                         while len(state) < self.memory.window_length:
                             state.insert(0, deepcopy(state[0]))
                         self.evaluating_states.append(state)
-                        n_evaluations -= 1
+                        n_evaluations_left -= 1
 
     def fit(self, env, nb_steps, action_repetition=1, callbacks=None, verbose=1,
             visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
@@ -119,13 +116,16 @@ class Agent(object):
             nb_max_episode_steps (integer): Number of steps per episode that the agent performs before
                 automatically resetting the environment. Set to `None` if each episode should run
                 (potentially indefinitely) until the environment signals a terminal state.
-            starting_checkpoints ([string]): starting checkpoints file names from which the enviroment 
-                will start at the begining of every episode. You can create 
-            nb_max_episode_steps (dictionary): provie the options in order to add avarage Q metric to 
-                the log as described at Playing Atari with Deep Reinforcement Learning. Two options are mandatory:
-                    n_evaluations (integer): number of checkpoints to be evaluated and avaraged
-                    exponential_landa (float): exponential parameter from which the checkpoint will be chosen
-                        [the smaller the longer will take to select the checkpoints] 
+            starting_checkpoints ([string]): starting checkpoints file names. When the enviroment is reset one
+                checkpoint from the list will be drawn at random and enviroment will start from that exact checkpoint. 
+                You can create the checkpoints using interactive_env.py.
+            nb_max_episode_steps (dictionary): provide the options in order to messure avarage Q after the end of each
+                episode. The metric will be added to the log as described at Playing Atari with Deep Reinforcement Learning.
+                The start of the training may be delay as it takes some time to choose the evaluationg states. 
+                You can either provide the two following options or a True boolean for using the defaults:
+                    n_evaluations (integer): number of checkpoints to be evaluated and avaraged (default: 10).
+                    bernoulli (float): bernoulli parameter. If succeed, the step will be chosen as a checkpoint.
+                    The smaller this number the longer will take to select the checkpoints (default: 0.1).
 
 
         # Returns
@@ -172,6 +172,7 @@ class Agent(object):
         did_abort = False
         try:
             self.collect_avarage_q_checkpoints(env, avarage_q, starting_checkpoints)
+
             while self.step < nb_steps:
                 if observation is None:  # start of a new episode
                     callbacks.on_episode_begin(episode)
@@ -275,12 +276,13 @@ class Agent(object):
                     episode_logs = {
                         'episode_reward': episode_reward,
                         'nb_episode_steps': episode_step,
-                        'nb_steps': self.step,
-                        'avarage_q': self.compute_avarage_q(self.evaluating_states)
+                        'nb_steps': self.step
                     }
 
+                    if self.evaluating_states:
+                        episode_logs['avarage_q'] = self.compute_avarage_q(self.evaluating_states) # computation is delegated to agent
+
                     callbacks.on_episode_end(episode, episode_logs)
-                    print("END")
                     episode += 1
                     observation = None
                     episode_step = None
