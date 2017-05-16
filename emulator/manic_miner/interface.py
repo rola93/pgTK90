@@ -62,7 +62,7 @@ class ManicMiner:
             "current_level": self._level(),
             "change_level": False
         }
-        
+
         if initial_level != self._level():
             # Paso de nivel
             info["change_level"] = True
@@ -235,6 +235,14 @@ class ManicMiner:
         portal = mem[32944]
         willy = mem[32876]
         return portal, willy
+
+    def _willy_position(self, x=None, y=None):
+        mem = em.mem
+        if x != None:
+            mem[32876] = x
+        if y != None:
+            mem[32872] = y
+        return mem[32876], mem[32872]
 
     def save_state(self, path='state_dump'):
         sp.save_array_state(path)
