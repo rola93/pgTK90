@@ -6,7 +6,7 @@ from gym import spaces
 
 
 class ManicMiner:
-    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0)):
+    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0), aire_infinito=True):
         assert isinstance(frameskip, int)
         self.frameskip = frameskip
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -25,13 +25,22 @@ class ManicMiner:
 
         self.actual_frame = 0
         self.action_space = spaces.Discrete(7)
+        # Redefinimos la funcion step
+        if aire_infinito:
+            self.step = self.infinite_air_step
+        else:
+            self.step = self.common_step
 
     def seed(self, seed):
         """Sets the seed for this env's random number generator(s).
         """
         spaces.seed(seed)
 
-    def step(self, action):
+    def infinite_air_step(self, action):
+        self._air(23)
+        return self.common_step(action)
+
+    def common_step(self, action):
         self.actual_frame += self.frameskip
         initial_score = self._score()
         initial_level = self._level()

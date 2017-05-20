@@ -120,9 +120,10 @@ if args.mode == 'train':
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
     callbacks += [FileLogger(log_filename, interval=100)]
+
     #action_repetition=1 es igual que frame skiping=0
     dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000,
-            action_repetition=1, start_step_policy=None, nb_max_start_steps=30, visualize=False)
+            action_repetition=1, start_step_policy=None, nb_max_start_steps=30, nb_max_episode_steps=18000, visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=False)
