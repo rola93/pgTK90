@@ -110,7 +110,7 @@ dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
 
 
-start_step_policy = no_op_start_step_policy
+#start_step_policy = no_op_start_step_policy
 
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
