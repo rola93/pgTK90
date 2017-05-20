@@ -118,6 +118,9 @@ class ManicMiner:
     def actions(self):
         return ['NOOP', 'ENTER', 'RIGHT', 'UP', 'LEFT', 'RIGHTUP', 'LEFTUP']
 
+    def no_op_action(self):
+        return 'NOOP'
+
     def action_space(self):
         return self.actions()
 

@@ -42,6 +42,9 @@ class SpectrumProcessor(Processor):
     def process_reward(self, reward):
         return np.clip(reward, -1., 1.)
 
+def no_op_start_step_policy(observation):
+    return env.no_op_action()
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
 parser.add_argument('--env-name', type=str, default='BreakoutDeterministic-v3')
@@ -105,6 +108,10 @@ dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
                train_interval=4, delta_clip=1., enable_double_dqn=True, enable_dueling_network=False)
 dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
+
+
+start_step_policy = no_op_start_step_policy
+
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
     # can be prematurely aborted. Notice that you can the built-in Keras callbacks!
@@ -113,16 +120,18 @@ if args.mode == 'train':
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
     callbacks += [FileLogger(log_filename, interval=100)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000, nb_max_start_steps=30, visualize=False)
+    #action_repetition=1 es igual que frame skiping=0
+    dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000,
+            action_repetition=1, start_step_policy=None, nb_max_start_steps=30, visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=False)
 
     # Finally, evaluate our algorithm for 10 episodes.
-    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, visualize=True)
+    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=None, visualize=True)
 elif args.mode == 'test':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, visualize=True)
+    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=None, visualize=True)
