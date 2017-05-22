@@ -6,7 +6,7 @@ from gym import spaces
 
 
 class ManicMiner:
-    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0), aire_infinito=True):
+    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0), infinite_air=True):
         assert isinstance(frameskip, int)
         self.frameskip = frameskip
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -26,7 +26,7 @@ class ManicMiner:
         self.actual_frame = 0
         self.action_space = spaces.Discrete(7)
         # Redefinimos la funcion step
-        if aire_infinito:
+        if infinite_air:
             self.step = self.infinite_air_step
         else:
             self.step = self.common_step
@@ -38,7 +38,44 @@ class ManicMiner:
 
     def infinite_air_step(self, action):
         self._air(23)
-        return self.common_step(action)
+
+        self.actual_frame += self.frameskip
+        initial_score = self._score()
+        initial_level = self._level()
+        sp.put_key(action)
+        done = False
+        for _ in range(self.frameskip + 1):
+            sp.execute()
+            if self._willy_died():
+                break
+
+        reward = self._score() - initial_score
+
+        #aire infinito, restamos 100 al morir
+        if self._willy_died():
+            reward += -100
+            done = self._reset(self._lives() - 1, self._level(), False)
+
+        info = {
+            "air": self._air(),
+            "lives": self._lives(),
+            "global_score": self._score(),
+            "current_level": self._level(),
+            "change_level": False
+        }
+
+        if initial_level != self._level():
+            # Paso de nivel
+            info["change_level"] = True
+            reward = self._air_to_score()
+            current_score = self._score()
+            self._score(current_score + reward)
+            self._reset(self._lives(), self._level(), False)
+
+        self.change_portal_color()
+
+        obs = sp.get_frame_as_array()
+        return obs, reward, done, info
 
     def common_step(self, action):
         self.actual_frame += self.frameskip
@@ -126,6 +163,9 @@ class ManicMiner:
 
     def actions(self):
         return ['NOOP', 'ENTER', 'RIGHT', 'UP', 'LEFT', 'RIGHTUP', 'LEFTUP']
+
+    def no_op_action(self):
+        return 'NOOP'
 
     def action_space(self):
         return self.actions()
