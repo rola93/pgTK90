@@ -110,7 +110,7 @@ dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
 
 
-#start_step_policy = no_op_start_step_policy
+start_step_policy = no_op_start_step_policy
 
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
@@ -123,16 +123,16 @@ if args.mode == 'train':
 
     #action_repetition=1 es igual que frame skiping=0
     dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000,
-            action_repetition=1, start_step_policy=None, nb_max_start_steps=30, nb_max_episode_steps=18000, visualize=False)
+            action_repetition=1, start_step_policy=start_step_policy, nb_max_start_steps=30, nb_max_episode_steps=18000, visualize=False)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=False)
 
     # Finally, evaluate our algorithm for 10 episodes.
-    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=None, visualize=True)
+    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=start_step_policy, visualize=True)
 elif args.mode == 'test':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=None, visualize=True)
+    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=start_step_policy, visualize=True)
