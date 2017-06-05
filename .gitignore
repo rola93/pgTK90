@@ -72,3 +72,5 @@ docs/_build/
 
 # PyBuilder
 target/
+
+*.h5f
