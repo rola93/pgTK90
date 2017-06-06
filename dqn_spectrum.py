@@ -122,6 +122,7 @@ if args.mode == 'train':
     callbacks += [FileLogger(log_filename, interval=100)]
 
     #action_repetition=1 es igual que frame skiping=0
+
     dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000,
             action_repetition=1, start_step_policy=start_step_policy, nb_max_start_steps=30, nb_max_episode_steps=18000, visualize=False)
 
