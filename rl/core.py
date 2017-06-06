@@ -134,7 +134,7 @@ class Agent(object):
                     # Perform random starts at beginning of episode and do not record them into the experience.
                     # This slightly changes the start position between games.
                     nb_random_start_steps = 0 if nb_max_start_steps == 0 else np.random.randint(nb_max_start_steps)
-                    for _ in range(nb_random_start_steps):
+                    for _ in xrange(nb_random_start_steps):
                         if start_step_policy is None:
                             action = env.action_space.sample()
                         else:
@@ -169,18 +169,18 @@ class Agent(object):
                 reward = 0.
                 accumulated_info = {}
                 done = False
-                for _ in range(action_repetition):
+                for _ in xrange(action_repetition):
                     callbacks.on_action_begin(action)
                     observation, r, done, info = env.step(action)
                     observation = deepcopy(observation)
                     if self.processor is not None:
                         observation, r, done, info = self.processor.process_step(observation, r, done, info)
-                    for key, value in info.items():
-                        if not np.isreal(value):
-                            continue
-                        if key not in accumulated_info:
-                            accumulated_info[key] = np.zeros_like(value)
-                        accumulated_info[key] += value
+                    # for key, value in info.items():
+                    #     if not np.isreal(value):
+                    #         continue
+                    #     if key not in accumulated_info:
+                    #         accumulated_info[key] = np.zeros_like(value)
+                    #     accumulated_info[key] += value
                     callbacks.on_action_end(action)
                     reward += r
                     if done:
@@ -217,6 +217,7 @@ class Agent(object):
                         'episode_reward': episode_reward,
                         'nb_episode_steps': episode_step,
                         'nb_steps': self.step,
+                        'global_score': info["global_score"]
                     }
                     callbacks.on_episode_end(episode, episode_logs)
 
@@ -270,7 +271,7 @@ class Agent(object):
 
         self._on_test_begin()
         callbacks.on_train_begin()
-        for episode in range(nb_episodes):
+        for episode in xrange(nb_episodes):
             callbacks.on_episode_begin(episode)
             episode_reward = 0.
             episode_step = 0
@@ -285,7 +286,7 @@ class Agent(object):
             # Perform random starts at beginning of episode and do not record them into the experience.
             # This slightly changes the start position between games.
             nb_random_start_steps = 0 if nb_max_start_steps == 0 else np.random.randint(nb_max_start_steps)
-            for _ in range(nb_random_start_steps):
+            for _ in xrange(nb_random_start_steps):
                 if start_step_policy is None:
                     action = env.action_space.sample()
                 else:
@@ -316,7 +317,7 @@ class Agent(object):
                     action = self.processor.process_action(action)
                 reward = 0.
                 accumulated_info = {}
-                for _ in range(action_repetition):
+                for _ in xrange(action_repetition):
                     callbacks.on_action_begin(action)
                     #print action
                     observation, r, d, info = env.step(action)
@@ -555,9 +556,9 @@ class MultiInputProcessor(Processor):
         self.nb_inputs = nb_inputs
 
     def process_state_batch(self, state_batch):
-        input_batches = [[] for x in range(self.nb_inputs)]
+        input_batches = [[] for x in xrange(self.nb_inputs)]
         for state in state_batch:
-            processed_state = [[] for x in range(self.nb_inputs)]
+            processed_state = [[] for x in xrange(self.nb_inputs)]
             for observation in state:
                 assert len(observation) == self.nb_inputs
                 for o, s in zip(observation, processed_state):
