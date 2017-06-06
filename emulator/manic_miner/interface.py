@@ -3,6 +3,7 @@ import py_zx.spectrum as sp
 import constants as c
 import os
 from gym import spaces
+import pdb
 
 
 class ManicMiner:
@@ -39,7 +40,7 @@ class ManicMiner:
     def infinite_air_step(self, action):
         self._air(23)
 
-        self.actual_frame += self.frameskip
+        self.actual_frame += 1
         initial_score = self._score()
         initial_level = self._level()
         sp.put_key(action)
@@ -78,7 +79,7 @@ class ManicMiner:
         return obs, reward, done, info
 
     def common_step(self, action):
-        self.actual_frame += self.frameskip
+        self.actual_frame += 1
         initial_score = self._score()
         initial_level = self._level()
         sp.put_key(action)
@@ -320,12 +321,11 @@ class ManicMiner:
 
     def change_portal_color(self):
         if self._level() == 0:
+            # pdb.set_trace()
             if self.poke(33836) == 53: # no more keys to collect
                 portal_dirs = [22973, 22974, 23005, 23006]
 
-                new_color = self.colors[(self.actual_frame // 4) % 2]
+                new_color = self.colors[(self.actual_frame) % 2]
 
                 for portal_dir in portal_dirs:
                     self.poke(portal_dir, new_color)
-
-                self.actual_frame += self.frameskip

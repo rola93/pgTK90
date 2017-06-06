@@ -4,7 +4,7 @@ from pdb import set_trace
 
 folder = 'checkpoints'
 lives = 0
-frameskip = 4
+frameskip = 3
 saved = 0
 starting_number = None
 
@@ -70,6 +70,7 @@ for episode in xrange(20):
             manic_miner.save_state('{}/{}'.format(folder, saved))
             print("Saved checkpoint #{}".format(saved))
             saved += 1
+            continue
         elif command == 'l':
             restore_name = raw_input('Number/name of state to restore [Enter to cancel]:')
             if restore_name:
