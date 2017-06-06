@@ -211,6 +211,9 @@ class DQNAgent(AbstractDQNAgent):
     def update_target_model_hard(self):
         self.target_model.set_weights(self.model.get_weights())
 
+    def compute_avarage_q(self, states):
+        return np.mean(map(lambda state: max(self.compute_q_values(state)), states))
+
     def forward(self, observation):
         # Select an action.
         state = self.memory.get_recent_state(observation)

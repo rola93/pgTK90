@@ -175,7 +175,7 @@ class ManicMiner:
         return sp.close()
 
     def _score(self, new_score=None):
-        # se toma en cuenta los digitos de overflow que no se ven en pantalla
+        # hidden overflow digits are taken into account
         if new_score:
             new_score_str = str(new_score)
             mem = em.mem
