@@ -124,7 +124,9 @@ if args.mode == 'train':
     #action_repetition=1 es igual que frame skiping=0
 
     dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000,
-            action_repetition=1, start_step_policy=start_step_policy, nb_max_start_steps=30, nb_max_episode_steps=18000, visualize=False, avarage_q={'n_evaluations': 10, 'bernoulli': 0.1})
+            action_repetition=1, start_step_policy=start_step_policy, nb_max_start_steps=30,
+            nb_max_episode_steps=1800, visualize=False, avarage_q={'n_evaluations': 10, 'bernoulli': 0.1},
+            starting_checkpoints=[i for i in xrange(17)])
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=False)

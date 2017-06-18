@@ -59,7 +59,7 @@ class Agent(object):
                     # maintain human checkpoint replay
                     if starting_checkpoints:
                         checkpoint = np.random.choice(starting_checkpoints)
-                        observation = deepcopy(env.reset(checkpoint=checkpoint))
+                        observation = deepcopy(env.reset(checkpoint='checkpoints/{}'.format(checkpoint)))
                     else:
                         observation = deepcopy(env.reset())
 
@@ -184,7 +184,7 @@ class Agent(object):
 
                     if starting_checkpoints:
                         checkpoint = np.random.choice(starting_checkpoints)
-                        observation = deepcopy(env.reset(checkpoint=checkpoint))
+                        observation = deepcopy(env.reset(checkpoint='checkpoints/{}'.format(checkpoint)))
                     else:
                         observation = deepcopy(env.reset())
                     if self.processor is not None:
@@ -282,6 +282,9 @@ class Agent(object):
 
                     if self.evaluating_states:
                         episode_logs['avarage_q'] = self.compute_avarage_q(self.evaluating_states) # computation is delegated to agent
+
+                    if starting_checkpoints:
+                        episode_logs['checkpoint'] = checkpoint
 
                     callbacks.on_episode_end(episode, episode_logs)
                     episode += 1

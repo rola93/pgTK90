@@ -69,9 +69,14 @@ class ManicMiner:
             # Paso de nivel
             info["change_level"] = True
             reward = self._air_to_score()
-            current_score = self._score()
-            self._score(current_score + reward)
-            self._reset(self._lives(), self._level(), False)
+
+            #por el momento al pasar de pabtalla reiniciamos con score +100
+            reward += 100
+            done = self._reset(self._lives() - 1, self._level(), False)
+
+            #current_score = self._score()
+            #self._score(current_score + reward)
+            #self._reset(self._lives(), self._level(), False)
 
         self.change_portal_color()
 
@@ -111,9 +116,14 @@ class ManicMiner:
             # Paso de nivel
             info["change_level"] = True
             reward = self._air_to_score()
-            current_score = self._score()
-            self._score(current_score + reward)
-            self._reset(self._lives(), self._level(), False)
+
+            #por el momento al pasar de pabtalla reiniciamos con score +100
+            reward += 100
+            done = self._reset(self._lives() - 1, self._level(), False)
+
+            #current_score = self._score()
+            #self._score(current_score + reward)
+            #self._reset(self._lives(), self._level(), False)
 
         self.change_portal_color()
 
@@ -321,8 +331,8 @@ class ManicMiner:
 
     def change_portal_color(self):
         if self._level() == 0:
-            # pdb.set_trace()
-            if self.poke(33836) == 53: # no more keys to collect
+            #pdb.set_trace()
+            if em.mem[32911]/128: # no more keys to collect
                 portal_dirs = [22973, 22974, 23005, 23006]
 
                 new_color = self.colors[(self.actual_frame) % 2]
