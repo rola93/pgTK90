@@ -54,7 +54,7 @@ args = parser.parse_args()
 # Get the environment and extract the number of actions.
 
 # CHANGED: env = gym.make(args.env_name)
-env = ManicMiner(frameskip=2, freccuency_mhz=1.3, crop=(8,8,0,64))
+env = ManicMiner(frameskip=3, freccuency_mhz=1.3, crop=(8,8,0,64))
 
 np.random.seed(123)
 env.seed(123)
@@ -105,7 +105,7 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
                processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=10000,
-               train_interval=4, delta_clip=1., enable_double_dqn=True, enable_dueling_network=False)
+               train_interval=4, delta_clip=1., enable_double_dqn=False, enable_dueling_network=False)
 dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
 
@@ -118,13 +118,15 @@ if args.mode == 'train':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
-    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
+    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=25000)]
     callbacks += [FileLogger(log_filename, interval=100)]
 
     #action_repetition=1 es igual que frame skiping=0
 
     dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000,
-            action_repetition=1, start_step_policy=start_step_policy, nb_max_start_steps=30, nb_max_episode_steps=18000, visualize=False)
+            action_repetition=1, start_step_policy=start_step_policy, nb_max_start_steps=30,
+            nb_max_episode_steps=1800, visualize=False, avarage_q={'n_evaluations': 10, 'bernoulli': 0.1},
+            starting_checkpoints=[i for i in xrange(17)])
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=False)

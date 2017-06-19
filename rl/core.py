@@ -36,15 +36,62 @@ class Agent(object):
         self.processor = processor
         self.training = False
         self.step = 0
+        self.evaluating_states = []
 
     def get_config(self):
         """Configuration of the agent for serialization.
         """
         return {}
 
+    def collect_avarage_q_checkpoints(self, env, avarage_q, starting_checkpoints): 
+        # note that nb_max_start_steps is not used
+        if avarage_q:
+            n_evaluations_left = avarage_q['n_evaluations'] if 'n_evaluations' in avarage_q else 10
+            bernoulli = int(1 / avarage_q['bernoulli']) if 'bernoulli' in avarage_q else 10
+            observation = None
+            observations = []
+
+            done = True
+            while n_evaluations_left > 0:
+                # Experience = namedtuple('Experience', 'state0, action, reward, state1, terminal1')
+
+                if done:
+                    # maintain human checkpoint replay
+                    if starting_checkpoints:
+                        checkpoint = np.random.choice(starting_checkpoints)
+                        observation = deepcopy(env.reset(checkpoint='checkpoints/{}'.format(checkpoint)))
+                    else:
+                        observation = deepcopy(env.reset())
+
+                    if self.processor is not None:
+                        observation = self.processor.process_observation(observation)
+                    
+                    assert observation is not None
+                    observations = [observation]
+                    done = False
+                else:
+                    action = env.action_space.sample() # Don't need to store action
+                    if self.processor is not None:
+                        action = self.processor.process_action(action)
+                        
+                    observation, reward, done, info = env.step(action)
+                    observation = deepcopy(observation)
+                    
+                    if self.processor is not None:
+                        observation, reward, done, info = self.processor.process_step(observation, reward, done, info)
+
+                    observations.append(observation)
+
+                    if np.random.randint(bernoulli) == 0:
+                        state = observations[-self.memory.window_length:]
+                        while len(state) < self.memory.window_length:
+                            state.insert(0, deepcopy(state[0]))
+                        self.evaluating_states.append(state)
+                        n_evaluations_left -= 1
+
     def fit(self, env, nb_steps, action_repetition=1, callbacks=None, verbose=1,
             visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
-            nb_max_episode_steps=None, starting_checkpoints=[]):
+            nb_max_episode_steps=None, starting_checkpoints=[], avarage_q=None):
         """Trains the agent on the given environment.
 
         # Arguments
@@ -69,6 +116,17 @@ class Agent(object):
             nb_max_episode_steps (integer): Number of steps per episode that the agent performs before
                 automatically resetting the environment. Set to `None` if each episode should run
                 (potentially indefinitely) until the environment signals a terminal state.
+            starting_checkpoints ([string]): starting checkpoints file names. When the enviroment is reset one
+                checkpoint from the list will be drawn at random and enviroment will start from that exact checkpoint. 
+                You can create the checkpoints using interactive_env.py.
+            nb_max_episode_steps (dictionary): provide the options in order to messure avarage Q after the end of each
+                episode. The metric will be added to the log as described at Playing Atari with Deep Reinforcement Learning.
+                The start of the training may be delay as it takes some time to choose the evaluationg states. 
+                You can either provide the two following options or a True boolean for using the defaults:
+                    n_evaluations (integer): number of checkpoints to be evaluated and avaraged (default: 10).
+                    bernoulli (float): bernoulli parameter. If succeed, the step will be chosen as a checkpoint.
+                    The smaller this number the longer will take to select the checkpoints (default: 0.1).
+
 
         # Returns
             A `keras.callbacks.History` instance that recorded the entire training process.
@@ -113,6 +171,8 @@ class Agent(object):
         episode_step = None
         did_abort = False
         try:
+            self.collect_avarage_q_checkpoints(env, avarage_q, starting_checkpoints)
+
             while self.step < nb_steps:
                 if observation is None:  # start of a new episode
                     callbacks.on_episode_begin(episode)
@@ -124,7 +184,7 @@ class Agent(object):
 
                     if starting_checkpoints:
                         checkpoint = np.random.choice(starting_checkpoints)
-                        observation = deepcopy(env.reset(checkpoint=checkpoint))
+                        observation = deepcopy(env.reset(checkpoint='checkpoints/{}'.format(checkpoint)))
                     else:
                         observation = deepcopy(env.reset())
                     if self.processor is not None:
@@ -219,8 +279,14 @@ class Agent(object):
                         'nb_steps': self.step,
                         'global_score': info["global_score"]
                     }
-                    callbacks.on_episode_end(episode, episode_logs)
 
+                    if self.evaluating_states:
+                        episode_logs['avarage_q'] = self.compute_avarage_q(self.evaluating_states) # computation is delegated to agent
+
+                    if starting_checkpoints:
+                        episode_logs['checkpoint'] = checkpoint
+
+                    callbacks.on_episode_end(episode, episode_logs)
                     episode += 1
                     observation = None
                     episode_step = None

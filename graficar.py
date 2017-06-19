@@ -19,8 +19,8 @@ EJE_Y = 'episode_reward'
 
 # Titulo & labels
 TITULO = "Version Actual"
-X_LABEL = "time_steps"
-Y_LABEL = "score"
+X_LABEL = "episodes"
+Y_LABEL = "episode_reward"
 
 WINDOW_SIZE = 1
 
@@ -47,7 +47,7 @@ def graficar(score_green, time_steps_green, window_size, score_red=None, time_st
     used_tags = [TAG_GREEN]
 
     log_msj = "GREEN\nmaximo valor: {}\nposicion: {}".format(max_value, max_pos + window_size)
-    assert np.average(score_green[max_pos:max_pos+window_size+window_size]) == max_value
+#    assert np.average(score_green[max_pos:max_pos+window_size+window_size]) == max_value
 
     if score_red is not None:
         vector, max_value, max_pos = promediar_vector(score_red, window_size)
@@ -56,7 +56,7 @@ def graficar(score_green, time_steps_green, window_size, score_red=None, time_st
         used_tags.append(TAG_RED)
 
         log_msj += "\nRED\nmaximo valor: {}\nposicion: {}".format(max_value, max_pos + window_size)
-        assert np.average(score_red[max_pos:max_pos + window_size + window_size]) == max_value
+ #       assert np.average(score_red[max_pos:max_pos + window_size + window_size]) == max_value
     if score_blue is not None:
         vector, max_value, max_pos = promediar_vector(score_blue, window_size)
         plt.plot(time_steps_blue[window_size:-window_size], vector, color='blue', marker='.', alpha=.5,
@@ -64,7 +64,7 @@ def graficar(score_green, time_steps_green, window_size, score_red=None, time_st
         used_tags.append(TAG_BLUE)
 
         log_msj += "\nBLUE\nmaximo valor: {}\nposicion: {}".format(max_value, max_pos + window_size)
-        assert np.average(score_blue[max_pos:max_pos + window_size + window_size]) == max_value
+  #      assert np.average(score_blue[max_pos:max_pos + window_size + window_size]) == max_value
 
     print log_msj
 
