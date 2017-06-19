@@ -9,6 +9,8 @@ from rl.callbacks import TestLogger, TrainEpisodeLogger, TrainIntervalLogger, Vi
 import numpy as np
 np.random.seed(123)
 
+import pdb
+
 class Agent(object):
     """Abstract base class for all implemented agents.
 
@@ -169,6 +171,10 @@ class Agent(object):
                 reward = 0.
                 accumulated_info = {}
                 done = False
+
+                # pdb.set_trace()
+
+                # NOTA: Esto agrega complejidad al pe*o. El frameskip lo implementamos en el emulador
                 for _ in range(action_repetition):
                     callbacks.on_action_begin(action)
                     observation, r, done, info = env.step(action)

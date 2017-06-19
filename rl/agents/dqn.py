@@ -9,10 +9,10 @@ from rl.policy import EpsGreedyQPolicy, GreedyQPolicy
 from rl.util import *
 from rl.keras_future import Model
 
+import pdb
 
 def mean_q(y_true, y_pred):
     return K.mean(K.max(y_pred, axis=-1))
-
 
 class AbstractDQNAgent(Agent):
     """Write me
@@ -158,7 +158,7 @@ class DQNAgent(AbstractDQNAgent):
 
         # We never train the target model, hence we can set the optimizer and loss arbitrarily.
         self.target_model = clone_model(self.model, self.custom_model_objects)
-        self.target_model.compile(optimizer='sgd', loss='mse')
+        self.target_model.compile(optimizer='sgd', loss='mse') #PER: loss=huber_loss
         self.model.compile(optimizer='sgd', loss='mse')
 
         # Compile model.
@@ -197,7 +197,7 @@ class DQNAgent(AbstractDQNAgent):
     def load_weights(self, filepath):
         self.model.load_weights(filepath)
         self.update_target_model_hard()
-
+ 
     def save_weights(self, filepath, overwrite=False):
         self.model.save_weights(filepath, overwrite=overwrite)
 
@@ -246,12 +246,18 @@ class DQNAgent(AbstractDQNAgent):
             assert len(experiences) == self.batch_size
 
             # Start by extracting the necessary parameters (we use a vectorized implementation).
+            index_batch = []
             state0_batch = []
             reward_batch = []
             action_batch = []
             terminal1_batch = []
             state1_batch = []
             for e in experiences:
+                priorized = None
+                if type(e) is tuple:
+                    index = e[0]
+                    index_batch.append(index)
+                    e = e[1]
                 state0_batch.append(e.state0)
                 state1_batch.append(e.state1)
                 reward_batch.append(e.reward)
@@ -259,6 +265,7 @@ class DQNAgent(AbstractDQNAgent):
                 terminal1_batch.append(0. if e.terminal1 else 1.)
 
             # Prepare and validate parameters.
+            # pdb.set_trace()
             state0_batch = self.process_state_batch(state0_batch)
             state1_batch = self.process_state_batch(state1_batch)
             terminal1_batch = np.array(terminal1_batch)
@@ -314,6 +321,7 @@ class DQNAgent(AbstractDQNAgent):
             # it is still useful to know the actual target to compute metrics properly.
             ins = [state0_batch] if type(self.model.input) is not list else state0_batch
             metrics = self.trainable_model.train_on_batch(ins + [targets, masks], [dummy_targets, targets])
+            # pdb.set_trace()
             metrics = [metric for idx, metric in enumerate(metrics) if idx not in (1, 2)]  # throw away individual losses
             metrics += self.policy.metrics
             if self.processor is not None:
