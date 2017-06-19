@@ -252,11 +252,11 @@ class DQNAgent(AbstractDQNAgent):
             terminal1_batch = []
             state1_batch = []
             for e in experiences:
-                priorized = None
-                if type(e) is tuple:
-                    index = e[0]
-                    index_batch.append(index)
-                    e = e[1]
+                # priorized = None
+                # if type(e) is tuple:
+                #     index = e[0]
+                #     index_batch.append(index)
+                #     e = e[1]
                 state0_batch.append(e.state0)
                 state1_batch.append(e.state1)
                 reward_batch.append(e.reward)
@@ -319,6 +319,12 @@ class DQNAgent(AbstractDQNAgent):
             # it is still useful to know the actual target to compute metrics properly.
             ins = [state0_batch] if type(self.model.input) is not list else state0_batch
             metrics = self.trainable_model.train_on_batch(ins + [targets, masks], [dummy_targets, targets])
+            print '*'*10
+            print 'type: ', type(metrics)
+            print metrics
+
+
+
             metrics = [metric for idx, metric in enumerate(metrics) if idx not in (1, 2)]  # throw away individual losses
             metrics += self.policy.metrics
             if self.processor is not None:

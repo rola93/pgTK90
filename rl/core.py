@@ -173,7 +173,7 @@ class Agent(object):
                 done = False
 
                 # NOTA-EZE: Esto agrega complejidad al pe*o. El frameskip lo implementamos en el emulador
-                for _ in range(action_repetition):
+                for _ in xrange(action_repetition):
                     callbacks.on_action_begin(action)
                     observation, r, done, info = env.step(action)
                     observation = deepcopy(observation)
@@ -193,8 +193,10 @@ class Agent(object):
                     # Force a terminal state.
                     done = True
                 
-                if self.memory.__class__.__name__ == 'PrioritizedMemory':
-                    self.memory.append_with_error(observation, action, reward, done, episode_beginning)
+                # if self.memory.__class__.__name__ == 'PrioritizedMemory':
+                #     self.memory.append_with_error(observation, action, reward, done, episode_beginning)
+                # if self.memory.__class__.__name__ == 'EfficientPriorizatedMemory':
+                #     self.memory.append(observation, action, reward, done)
                 
                 metrics = self.backward(reward, terminal=done)
                 episode_reward += reward
@@ -219,9 +221,11 @@ class Agent(object):
                     # always non-terminal by convention.
                     self.forward(observation)
 
-                    if self.memory.__class__.__name__ == 'PrioritizedMemory':
-                        self.memory.append_with_error(observation)
-                    
+                    # if self.memory.__class__.__name__ == 'PrioritizedMemory':
+                    #     self.memory.append_with_error(observation)
+                    # if self.memory.__class__.__name__ == 'EfficientPriorizatedMemory':
+                    #     self.memory.append(observation)
+
                     self.backward(0., terminal=False)
 
                     # This episode is finished, report and reset.
