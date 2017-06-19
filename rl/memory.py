@@ -245,15 +245,18 @@ class EpisodeParameterMemory(Memory):
         return config
 
 
-class PrioritizedMemory(Memory):
+class PrioritizedMemory:
     
-    def __init__(self, limit, error, alfa, **kwargs):
-        super(PrioritizedMemory, self).__init__(**kwargs)
+    def __init__(self, limit, error, alfa, window_length, **kwargs):
         self.tree = SumTree(limit)
         self.error = error
         self.alfa = alfa
+        self.window_length = window_length
 
-        self.previous_state = None
+        self.observations = deque(maxlen=window_length + 1)
+        self.actions = deque(maxlen=window_length + 1)
+        self.rewards = deque(maxlen=window_length + 1)
+        self.terminals = deque(maxlen=window_length + 1)
 
     def _getPriority(self, error):
         return (error + self.error) ** self.alfa
@@ -276,16 +279,46 @@ class PrioritizedMemory(Memory):
         p = self._getPriority(error)
         self.tree.update(idx, p)
 
-    def append(self, observation, action, reward, terminal, training=True, error=1):
-        super(PrioritizedMemory, self).append(observation, action, reward, terminal, training=training)
-        current_state = self.get_recent_state(observation)
-        if self.previous_state == None:
-            self.previous_state = zeroed_observation(current_state)
-        experience = Experience(state0=self.previous_state, action=action, reward=reward, 
-                                    state1=current_state, terminal1=terminal)
-        self.previous_state = current_state 
-        probability = self._getPriority(error)
-        self.tree.add(probability, experience) 
+    def append(self, observation, action, reward, terminal, training=True):
+        pass
+
+    def get_recent_state(self, current_observation):
+        state = [current_observation]
+        while len(state) < self.window_length:
+            state.insert(0, deepcopy(state[0]))
+        return  state  
+
+    def append_with_error(self, observation, action=None, reward=None, terminal=None, initial=None, error=1, training=True):
+        if training:
+            if initial:
+                self.observations.clear()
+                self.actions.clear()
+                self.rewards.clear()
+                self.terminals.clear()
+
+            self.observations.append(observation)
+            self.actions.append(action)
+            self.rewards.append(reward)
+            self.terminals.append(terminal)
+
+            if len(self.observations) > 1:
+                state0 = list(self.observations)[-(self.window_length + 1):-1]
+                state1 = list(self.observations)[-(self.window_length):]
+                while len(state0) < self.window_length:
+                    state0.insert(0, deepcopy(state0[0]))
+                while len(state1) < self.window_length:
+                    state1.insert(0, deepcopy(state1[0]))
+
+                experience = Experience(
+                    state0 = state0, 
+                    action = self.actions[-2], 
+                    reward = self.rewards[-2], 
+                    state1 = state1, 
+                    terminal1 = self.terminals[-2])
+
+                probability = self._getPriority(error)
+                self.tree.add(probability, experience) 
+
 
     def get_config(self):
         config = super(PrioritizedMemory, self).get_config()

@@ -9,7 +9,6 @@ from rl.policy import EpsGreedyQPolicy, GreedyQPolicy
 from rl.util import *
 from rl.keras_future import Model
 
-import pdb
 
 def mean_q(y_true, y_pred):
     return K.mean(K.max(y_pred, axis=-1))
@@ -231,7 +230,7 @@ class DQNAgent(AbstractDQNAgent):
     def backward(self, reward, terminal):
         # Store most recent experience in memory.
         if self.step % self.memory_interval == 0:
-            self.memory.append(self.recent_observation, self.recent_action, reward, terminal,
+            self.memory.append(self.recent_observation, action=self.recent_action, reward=reward, terminal=terminal,
                                training=self.training)
 
         metrics = [np.nan for _ in self.metrics_names]
@@ -265,7 +264,6 @@ class DQNAgent(AbstractDQNAgent):
                 terminal1_batch.append(0. if e.terminal1 else 1.)
 
             # Prepare and validate parameters.
-            # pdb.set_trace()
             state0_batch = self.process_state_batch(state0_batch)
             state1_batch = self.process_state_batch(state1_batch)
             terminal1_batch = np.array(terminal1_batch)
@@ -321,7 +319,6 @@ class DQNAgent(AbstractDQNAgent):
             # it is still useful to know the actual target to compute metrics properly.
             ins = [state0_batch] if type(self.model.input) is not list else state0_batch
             metrics = self.trainable_model.train_on_batch(ins + [targets, masks], [dummy_targets, targets])
-            # pdb.set_trace()
             metrics = [metric for idx, metric in enumerate(metrics) if idx not in (1, 2)]  # throw away individual losses
             metrics += self.policy.metrics
             if self.processor is not None:

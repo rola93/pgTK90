@@ -9,8 +9,6 @@ from rl.callbacks import TestLogger, TrainEpisodeLogger, TrainIntervalLogger, Vi
 import numpy as np
 np.random.seed(123)
 
-import pdb
-
 class Agent(object):
     """Abstract base class for all implemented agents.
 
@@ -114,9 +112,11 @@ class Agent(object):
         episode_reward = None
         episode_step = None
         did_abort = False
+        episode_beginning = True
         try:
             while self.step < nb_steps:
                 if observation is None:  # start of a new episode
+                    episode_beginning = True
                     callbacks.on_episode_begin(episode)
                     episode_step = 0
                     episode_reward = 0.
@@ -172,9 +172,7 @@ class Agent(object):
                 accumulated_info = {}
                 done = False
 
-                # pdb.set_trace()
-
-                # NOTA: Esto agrega complejidad al pe*o. El frameskip lo implementamos en el emulador
+                # NOTA-EZE: Esto agrega complejidad al pe*o. El frameskip lo implementamos en el emulador
                 for _ in range(action_repetition):
                     callbacks.on_action_begin(action)
                     observation, r, done, info = env.step(action)
@@ -194,6 +192,10 @@ class Agent(object):
                 if nb_max_episode_steps and episode_step >= nb_max_episode_steps - 1:
                     # Force a terminal state.
                     done = True
+                
+                if self.memory.__class__.__name__ == 'PrioritizedMemory':
+                    self.memory.append_with_error(observation, action, reward, done, episode_beginning)
+                
                 metrics = self.backward(reward, terminal=done)
                 episode_reward += reward
 
@@ -216,6 +218,10 @@ class Agent(object):
                     # the *next* state, that is the state of the newly reset environment, is
                     # always non-terminal by convention.
                     self.forward(observation)
+
+                    if self.memory.__class__.__name__ == 'PrioritizedMemory':
+                        self.memory.append_with_error(observation)
+                    
                     self.backward(0., terminal=False)
 
                     # This episode is finished, report and reset.

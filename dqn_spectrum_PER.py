@@ -84,7 +84,7 @@ print(model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
-memory = PrioritizedMemory(limit=200000, error=0.01, alfa=0.6, window_length=WINDOW_LENGTH)
+memory = PrioritizedMemory(limit=100000, error=0.01, alfa=0.6, window_length=WINDOW_LENGTH)
 processor = SpectrumProcessor()
 
 # Select a policy. We use eps-greedy action selection, which means that a random action is selected
@@ -126,4 +126,4 @@ elif args.mode == 'test':
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, visualize=True)
+    dqn.test(env, nb_episodes=10, visualize=True, PER=True)
