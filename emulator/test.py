@@ -9,16 +9,16 @@ import matplotlib.pyplot as plt
 def histograma(datos, titulo='Duracion por episodio', x_label='steps', n=30):
     max = int(np.max(datos))
     bins = np.arange(start=0, stop=max + 1, step=n)
-    res,_,_ = plt.hist(datos, bins=bins, cumulative=False, align="left")
+    res,_,_ = plt.hist(datos, bins=bins, cumulative=True, align="left", normed=True)
     # print "min={}, ret={}, n={}, bins={}, len(res)={}, res={}".format(np.min(datos), res[0], n, bins[:5], len(res), res[:5])
     plt.title(titulo)
     plt.xlabel(x_label)
     plt.ylabel("Frecuencia")
     # plt.savefig(titulo.replace(' ', '_')+'.png', bbox_inches='tight')
-    # plt.show()
+    plt.show()
     plt.gcf().clear()
     print "El res es {}".format(res[0])
-    return res[0]
+    return res
 
 
 def stats(vector):
@@ -45,6 +45,7 @@ def graficar_experimento_guardado(num_episodios=100, n=30):
         for k in resultado_completo['fs={}'.format(j)]['steps_stats']:
             print "{}: {}".format(k, resultado_completo['fs={}'.format(j)]['steps_stats'][k])
     return res
+
 
 
 def experimento(num_episodios=100):
@@ -96,10 +97,18 @@ def graficar(x, y_1, y_2, y_3):
              alpha=.5, label=tag_3)
 
     plt.legend([tag_1, tag_2, tag_3], loc='best')
-    plt.xlabel('')
-    plt.ylabel('')
-    plt.title('')
+    plt.xlabel('steps')
+    plt.ylabel('p(morir)')
+    plt.title('Probabilidad de morir durante un comienzo aleatorio')
     plt.show()
+
+
+def obtener_ocurrencias(num_episodios):
+    resultado_completo = json.load(open('{}_random_episodes_log'.format(num_episodios), 'r'))
+    res = []
+    for j in xrange(1, 4):
+        res.append(histograma(resultado_completo['fs={}'.format(j)]['steps'], 'Duracion por episodio - fs={}, n={}'.format(j, 1), n=1))
+    return res
 
 import datetime
 
@@ -113,16 +122,25 @@ end = datetime.datetime.now()
 print "duracion: ", (end-start).seconds
 
 eps = []
-p_1, p_2, p_3 = [], [], []
-for j in xrange(1, 30):
-    p = graficar_experimento_guardado(num_episodios, n=j)
+res_1, res_2, res_3 = [], [], []
+ocurrencias = obtener_ocurrencias(num_episodios)
+
+for j in xrange(0, 50):
+    # p = graficar_experimento_guardado(num_episodios, n=j)
     # print "p={}, n={}".format(p, j)
-    p_1.append(p[0] / 100.0 * 1.0 / j)
-    p_2.append(p[1] / 100.0 * 1.0 / j)
-    p_3.append(p[2]/100.0 * 1.0/j)
+    p_1 = 0
+    p_2 = 0
+    p_3 = 0
+    for i in xrange(0, j):
+        p_1 += ocurrencias[0][i] * 1.0 / float(j)
+        p_2 += ocurrencias[1][i] * 1.0 / float(j)
+        p_3 += ocurrencias[2][i] * 1.0 / float(j)
+    res_1.append(p_1)
+    res_2.append(p_2)
+    res_3.append(p_3)
     eps.append(j)
 
-graficar(eps, p_1, p_2, p_3)
+graficar(eps, res_1, res_2, res_3)
 
 
 
