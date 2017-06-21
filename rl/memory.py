@@ -387,19 +387,26 @@ class EfficientPriorizatedMemory(Memory):
         experiences = []
         for i, idx in enumerate(batch_idxs):
             terminal0 = self.terminals[idx - 2] if idx >= 2 else False
+            new_priority_idx = None
             while terminal0:
                 # Skip this transition because the environment was reset here. Select a new, random
                 # transition and use this instead. This may cause the batch to contain the same
                 # transition twice.
-                idx = sample_batch_indexes(1, self.nb_entries, size=1)[0]
+                # idx = sample_batch_indexes(1, self.nb_entries, size=1)[0]
+                new_priority_idx, new_batch_idxs = zip(*self._sample_priorizated_batch(batch_size=1))
+                idx = new_batch_idxs[0]
                 terminal0 = self.terminals[idx - 2] if idx >= 2 else False
             assert 1 <= idx < self.nb_entries
+
+            if new_priority_idx:
+                # if had selected a new transition, updete its priority
+                priority_idx[i] = new_priority_idx
 
             # This code is slightly complicated by the fact that subsequent observations might be
             # from different episodes. We ensure that an experience never spans multiple episodes.
             # This is probably not that important in practice but it seems cleaner.
             state0 = [self.observations[idx - 1]]
-            for offset in range(0, self.window_length - 1):
+            for offset in xrange(0, self.window_length - 1):
                 current_idx = idx - 2 - offset
                 current_terminal = self.terminals[current_idx - 1] if current_idx - 1 > 0 else False
                 if current_idx < 0 or (not self.ignore_episode_boundaries and current_terminal):
@@ -441,6 +448,6 @@ class EfficientPriorizatedMemory(Memory):
         return len(self.observations)
 
     def get_config(self):
-        config = super(SequentialMemory, self).get_config()
+        config = super(EfficientPriorizatedMemory, self).get_config()
         config['limit'] = self.limit
         return config
