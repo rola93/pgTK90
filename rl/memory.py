@@ -7,7 +7,6 @@ import numpy as np
 from copy import deepcopy
 from rl.sum_tree import SumTree
 
-
 # This is to be understood as a transition: Given `state0`, performing `action`
 # yields `reward` and results in `state1`, which might be `terminal`.
 Experience = namedtuple('Experience', 'state0, action, reward, state1, terminal1')
@@ -358,11 +357,16 @@ class EfficientPriorizatedMemory(Memory):
 
             s = random.uniform(a, b)
             (idx, p, data) = self.priorities.get(s)
+            while data == (self.nb_entries - 1):
+                # We dont want the last element case it has not transition state yet
+
+                s = random.uniform(a, b)
+                (idx, p, data) = self.priorities.get(s)
             batch.append((idx, data))
         assert len(batch) == batch_size
         return batch
 
-    def append(self, observation, action, reward, terminal, training=True, priority=0):
+    def append(self, observation, action, reward, terminal, training=True, priority=1):
         super(EfficientPriorizatedMemory, self).append(observation, action, reward, terminal, training=training)
 
         # This needs to be understood as follows: in `observation`, take `action`, obtain `reward`
@@ -376,8 +380,12 @@ class EfficientPriorizatedMemory(Memory):
 
     def sample_secuential_batch(self, batch_size):
 
-        priority_idx, batch_idxs = zip(*self._sample_priorizated_batch(batch_size))
+        # if type(priority_idx[i]) == tuple:
+        indexes_sampled = self._sample_priorizated_batch(batch_size)
+        priority_idx, batch_idxs = zip(*indexes_sampled)
         batch_idxs = np.array(list(batch_idxs)) + 1
+
+        priority_idx = list(priority_idx) #[x for x in priority_idx]
 
         assert np.min(batch_idxs) >= 1
         assert np.max(batch_idxs) < self.nb_entries
@@ -393,15 +401,19 @@ class EfficientPriorizatedMemory(Memory):
                 # transition and use this instead. This may cause the batch to contain the same
                 # transition twice.
                 # idx = sample_batch_indexes(1, self.nb_entries, size=1)[0]
+                
                 new_priority_idx, new_batch_idxs = zip(*self._sample_priorizated_batch(batch_size=1))
+                while new_priority_idx[0] == (self.nb_entries - 1):
+                    new_priority_idx, new_batch_idxs = zip(*self._sample_priorizated_batch(batch_size=1))
                 idx = new_batch_idxs[0]
                 terminal0 = self.terminals[idx - 2] if idx >= 2 else False
-            assert 1 <= idx < self.nb_entries
 
             if new_priority_idx:
                 # if had selected a new transition, updete its priority
-                priority_idx[i] = new_priority_idx
+                priority_idx[i] = new_priority_idx[0]
 
+            assert 1 <= idx < self.nb_entries
+            
             # This code is slightly complicated by the fact that subsequent observations might be
             # from different episodes. We ensure that an experience never spans multiple episodes.
             # This is probably not that important in practice but it seems cleaner.
@@ -428,6 +440,7 @@ class EfficientPriorizatedMemory(Memory):
 
             assert len(state0) == self.window_length
             assert len(state1) == len(state0)
+
             experiences.append(
                 PriorizaredExperience(state0=state0, action=action, reward=reward, state1=state1, terminal1=terminal1,
                                       priority_idx=priority_idx[i]))
@@ -441,7 +454,10 @@ class EfficientPriorizatedMemory(Memory):
 
         for idx, error in updated_error_pairs:
             p = self._get_priority(error)
+            # try:
             self.priorities.update(idx, p)
+            # except:
+            #     self.priorities.update(idx[0], p)
 
     @property
     def nb_entries(self):

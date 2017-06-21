@@ -227,6 +227,39 @@ class DQNAgent(AbstractDQNAgent):
 
         return action
 
+    def error(self, experience):
+        # no_state = numpy.zeros(self.stateCnt)
+
+        # states = numpy.array([ o[1][0] for o in batch ])
+        # states_ = numpy.array([ (no_state if o[1][3] is None else o[1][3]) for o in batch ])
+
+        # p = agent.brain.predict(states)
+
+        # p_ = agent.brain.predict(states_, target=False)
+        # pTarget_ = agent.brain.predict(states_, target=True)
+
+        # x = numpy.zeros((len(batch), IMAGE_STACK, IMAGE_WIDTH, IMAGE_HEIGHT))
+        # y = numpy.zeros((len(batch), self.actionCnt))
+        # errors = numpy.zeros(len(batch))
+        
+        # for i in range(len(batch)):
+        #     o = batch[i][1]
+        #     s = o[0]; a = o[1]; r = o[2]; s_ = o[3]
+            
+        #     t = p[i]
+        #     oldVal = t[a]
+        #     if s_ is None:
+        #         t[a] = r
+        #     else:
+        #         t[a] = r + GAMMA * pTarget_[i][ numpy.argmax(p_[i]) ]  # double DQN
+
+        #     x[i] = s
+        #     y[i] = t
+        #     errors[i] = abs(oldVal - t[a])
+
+        # return (x, y, errors)
+        return 1
+
     def backward(self, reward, terminal):
         # Store most recent experience in memory.
         if self.step % self.memory_interval == 0:
@@ -319,11 +352,8 @@ class DQNAgent(AbstractDQNAgent):
             # it is still useful to know the actual target to compute metrics properly.
             ins = [state0_batch] if type(self.model.input) is not list else state0_batch
             metrics = self.trainable_model.train_on_batch(ins + [targets, masks], [dummy_targets, targets])
-            print '*'*10
-            print 'type: ', type(metrics)
-            print metrics
 
-
+            self.memory.update([(e.priority_idx, self.error(e)) for e in experiences])
 
             metrics = [metric for idx, metric in enumerate(metrics) if idx not in (1, 2)]  # throw away individual losses
             metrics += self.policy.metrics

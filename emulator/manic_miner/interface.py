@@ -3,7 +3,6 @@ import py_zx.spectrum as sp
 import constants as c
 import math
 import os
-import pdb
 import numpy as np
 
 class ManicMiner:
