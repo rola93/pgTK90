@@ -195,8 +195,6 @@ class Agent(object):
                 
                 # if self.memory.__class__.__name__ == 'PrioritizedMemory':
                 #     self.memory.append_with_error(observation, action, reward, done, episode_beginning)
-                # if self.memory.__class__.__name__ == 'EfficientPriorizatedMemory':
-                #     self.memory.append(observation, action, reward, done)
                 
                 metrics = self.backward(reward, terminal=done)
                 episode_reward += reward
@@ -234,6 +232,12 @@ class Agent(object):
                         'nb_episode_steps': episode_step,
                         'nb_steps': self.step,
                     }
+
+                    if self.memory.is_prioritized():
+                        episode_logs['max_error_PER'] = self.memory.maximum
+                        episode_logs['average_error_PER'] = self.memory.average
+                        self.memory.reset_metrics()
+
                     callbacks.on_episode_end(episode, episode_logs)
 
                     episode += 1

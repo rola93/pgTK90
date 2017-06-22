@@ -9,8 +9,6 @@ from rl.policy import EpsGreedyQPolicy, GreedyQPolicy
 from rl.util import *
 from rl.keras_future import Model
 
-import pdb
-
 
 def mean_q(y_true, y_pred):
     return K.mean(K.max(y_pred, axis=-1))
@@ -318,22 +316,23 @@ class DQNAgent(AbstractDQNAgent):
             targets = np.array(targets).astype('float32')
             masks = np.array(masks).astype('float32')
             
-            memory_update = []
-            for i in range(len(state0_batch)):
-                state0 = state0_batch[i]
-                action = action_batch[i]
-                estimated_q_value_for_action = self.compute_q_values(state0)[action]
-                memory_update.append((experiences[i].priority_idx, np.absolute(Rs[i] - estimated_q_value_for_action)))
+            if self.memory.is_prioritized():
+                memory_update = []
+                for i in range(len(state0_batch)):
+                    state0 = state0_batch[i]
+                    action = action_batch[i]
+                    estimated_q_value_for_action = self.compute_q_values(state0)[action]
+                    error = np.absolute(Rs[i] - estimated_q_value_for_action)
+                    memory_update.append((experiences[i].priority_idx, error))
+                    
 
-            #print "\nmax error:", max(zip(*memory_update)[1])
-            self.memory.update(memory_update)
+                self.memory.update(memory_update)
 
             # Finally, perform a single update on the entire batch. We use a dummy target since
             # the actual loss is computed in a Lambda layer that needs more complex input. However,
             # it is still useful to know the actual target to compute metrics properly.
             ins = [state0_batch] if type(self.model.input) is not list else state0_batch
             metrics = self.trainable_model.train_on_batch(ins + [targets, masks], [dummy_targets, targets])
-            # pdb.set_trace()
 
 
             metrics = [metric for idx, metric in enumerate(metrics) if idx not in (1, 2)]  # throw away individual losses
@@ -405,7 +404,7 @@ class NAFLayer(Layer):
             # Create L and L^T matrix, which we use to construct the positive-definite matrix P.
             L = None
             LT = None
-            if K.backend() == 'theano':
+            if K.wend() == 'theano':
                 import theano.tensor as T
                 import theano
 

@@ -86,6 +86,9 @@ class Memory(object):
     def sample(self, batch_size, batch_idxs=None):
         raise NotImplementedError()
 
+    def is_prioritized(self):
+        return False
+
     def append(self, observation, action, reward, terminal, training=True):
         self.recent_observations.append(observation)
         self.recent_terminals.append(terminal)
@@ -343,8 +346,15 @@ class EfficientPriorizatedMemory(Memory):
         self.e = error
         self.a = alfa
 
+        self.maximum = np.nan
+        self.sumatory = 0
+        self.number_updates = 0
+
     def _get_priority(self, error):
         return (error + self.e) ** self.a
+
+    def is_prioritized(self):
+        return True
 
     def _sample_priorizated_batch(self, batch_size):
         # Returns a list of pairs (idx, data)
@@ -454,17 +464,27 @@ class EfficientPriorizatedMemory(Memory):
         return self.sample_secuential_batch(batch_size)
 
     def update(self, updated_error_pairs):
-
         for idx, error in updated_error_pairs:
-            p = self._get_priority(error)
-            # try:
-            self.priorities.update(idx, p)
-            # except:
-            #     self.priorities.update(idx[0], p)
+            self.priorities.update(idx, self._get_priority(error))
+
+            # metrics
+            self.maximum = error if np.isnan(self.maximum) or error > self.maximum else self.maximum 
+            self.sumatory += error
+            self.number_updates += 1
 
     @property
     def nb_entries(self):
         return len(self.observations)
+
+    @property
+    def average(self):
+        return self.sumatory / self.number_updates if self.number_updates > 0 else np.nan
+
+    def reset_metrics(self):
+        self.maximum = np.nan
+        self.sumatory = 0
+        self.number_updates = 0
+        
 
     def get_config(self):
         config = super(EfficientPriorizatedMemory, self).get_config()
