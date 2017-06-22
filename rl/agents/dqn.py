@@ -9,6 +9,8 @@ from rl.policy import EpsGreedyQPolicy, GreedyQPolicy
 from rl.util import *
 from rl.keras_future import Model
 
+import pdb
+
 
 def mean_q(y_true, y_pred):
     return K.mean(K.max(y_pred, axis=-1))
@@ -227,38 +229,6 @@ class DQNAgent(AbstractDQNAgent):
 
         return action
 
-    def error(self, experience):
-        # no_state = numpy.zeros(self.stateCnt)
-
-        # states = numpy.array([ o[1][0] for o in batch ])
-        # states_ = numpy.array([ (no_state if o[1][3] is None else o[1][3]) for o in batch ])
-
-        # p = agent.brain.predict(states)
-
-        # p_ = agent.brain.predict(states_, target=False)
-        # pTarget_ = agent.brain.predict(states_, target=True)
-
-        # x = numpy.zeros((len(batch), IMAGE_STACK, IMAGE_WIDTH, IMAGE_HEIGHT))
-        # y = numpy.zeros((len(batch), self.actionCnt))
-        # errors = numpy.zeros(len(batch))
-        
-        # for i in range(len(batch)):
-        #     o = batch[i][1]
-        #     s = o[0]; a = o[1]; r = o[2]; s_ = o[3]
-            
-        #     t = p[i]
-        #     oldVal = t[a]
-        #     if s_ is None:
-        #         t[a] = r
-        #     else:
-        #         t[a] = r + GAMMA * pTarget_[i][ numpy.argmax(p_[i]) ]  # double DQN
-
-        #     x[i] = s
-        #     y[i] = t
-        #     errors[i] = abs(oldVal - t[a])
-
-        # return (x, y, errors)
-        return 1
 
     def backward(self, reward, terminal):
         # Store most recent experience in memory.
@@ -321,6 +291,7 @@ class DQNAgent(AbstractDQNAgent):
                 assert target_q_values.shape == (self.batch_size, self.nb_actions)
                 q_batch = target_q_values[range(self.batch_size), actions]
             else:
+
                 # Compute the q_values given state1, and extract the maximum for each sample in the batch.
                 # We perform this prediction on the target_model instead of the model for reasons
                 # outlined in Mnih (2015). In short: it makes the algorithm more stable.
@@ -346,14 +317,24 @@ class DQNAgent(AbstractDQNAgent):
                 mask[action] = 1.  # enable loss for this specific action
             targets = np.array(targets).astype('float32')
             masks = np.array(masks).astype('float32')
+            
+            memory_update = []
+            for i in range(len(state0_batch)):
+                state0 = state0_batch[i]
+                action = action_batch[i]
+                estimated_q_value_for_action = self.compute_q_values(state0)[action]
+                memory_update.append((experiences[i].priority_idx, np.absolute(Rs[i] - estimated_q_value_for_action)))
+
+            #print "\nmax error:", max(zip(*memory_update)[1])
+            self.memory.update(memory_update)
 
             # Finally, perform a single update on the entire batch. We use a dummy target since
             # the actual loss is computed in a Lambda layer that needs more complex input. However,
             # it is still useful to know the actual target to compute metrics properly.
             ins = [state0_batch] if type(self.model.input) is not list else state0_batch
             metrics = self.trainable_model.train_on_batch(ins + [targets, masks], [dummy_targets, targets])
+            # pdb.set_trace()
 
-            self.memory.update([(e.priority_idx, self.error(e)) for e in experiences])
 
             metrics = [metric for idx, metric in enumerate(metrics) if idx not in (1, 2)]  # throw away individual losses
             metrics += self.policy.metrics

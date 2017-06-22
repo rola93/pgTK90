@@ -357,16 +357,15 @@ class EfficientPriorizatedMemory(Memory):
 
             s = random.uniform(a, b)
             (idx, p, data) = self.priorities.get(s)
-            while data == (self.nb_entries - 1):
+            while data >= (self.nb_entries - 1):
                 # We dont want the last element case it has not transition state yet
-
                 s = random.uniform(a, b)
                 (idx, p, data) = self.priorities.get(s)
             batch.append((idx, data))
         assert len(batch) == batch_size
         return batch
 
-    def append(self, observation, action, reward, terminal, training=True, priority=1):
+    def append(self, observation, action, reward, terminal, training=True, error=1):
         super(EfficientPriorizatedMemory, self).append(observation, action, reward, terminal, training=training)
 
         # This needs to be understood as follows: in `observation`, take `action`, obtain `reward`
@@ -376,7 +375,7 @@ class EfficientPriorizatedMemory(Memory):
             self.actions.append(action)
             self.rewards.append(reward)
             self.terminals.append(terminal)
-            self.priorities.add(p=priority, data=i)
+            self.priorities.add(p=self._get_priority(error), data=i)
 
     def sample_secuential_batch(self, batch_size):
 
@@ -402,10 +401,14 @@ class EfficientPriorizatedMemory(Memory):
                 # transition twice.
                 # idx = sample_batch_indexes(1, self.nb_entries, size=1)[0]
                 
-                new_priority_idx, new_batch_idxs = zip(*self._sample_priorizated_batch(batch_size=1))
-                while new_priority_idx[0] == (self.nb_entries - 1):
-                    new_priority_idx, new_batch_idxs = zip(*self._sample_priorizated_batch(batch_size=1))
-                idx = new_batch_idxs[0]
+                new_priority_idx, new_batch_idx = zip(*self._sample_priorizated_batch(batch_size=1))
+                new_batch_idx = new_batch_idx[0] + 1
+                while new_batch_idx >= (self.nb_entries - 1):
+                    # We dont want the last element case it has not transition state yet
+                    new_priority_idx, new_batch_idx = zip(*self._sample_priorizated_batch(batch_size=1))
+                    new_batch_idx = new_batch_idx[0] + 1
+
+                idx = new_batch_idx
                 terminal0 = self.terminals[idx - 2] if idx >= 2 else False
 
             if new_priority_idx:
