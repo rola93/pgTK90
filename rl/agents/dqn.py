@@ -407,7 +407,7 @@ class NAFLayer(Layer):
             # Create L and L^T matrix, which we use to construct the positive-definite matrix P.
             L = None
             LT = None
-            if K.wend() == 'theano':
+            if K.backend() == 'theano':
                 import theano.tensor as T
                 import theano
 
