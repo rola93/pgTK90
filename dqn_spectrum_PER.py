@@ -14,10 +14,10 @@ import keras.backend as K
 
 from rl.agents.dqn import DQNAgent
 from rl.policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy
-from rl.memory import SequentialMemory, PrioritizedMemory, EfficientPriorizatedMemory
+from rl.memory import SequentialMemory, PrioritizedMemory
 from rl.core import Processor
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
-
+import pdb
 
 INPUT_SHAPE = (84, 84)
 WINDOW_LENGTH = 4
@@ -36,14 +36,12 @@ class SpectrumProcessor(Processor):
         # We could perform this processing step in `process_observation`. In this case, however,
         # we would need to store a `float32` array instead, which is 4x more memory intensive than
         # an `uint8` array. This matters if we store 1M observations.
+        # pdb.set_trace()
         processed_batch = batch.astype('float32') / 255.
         return processed_batch
 
     def process_reward(self, reward):
         return np.clip(reward, -1., 1.)
-
-def no_op_start_step_policy(observation):
-    return env.no_op_action()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
@@ -54,11 +52,11 @@ args = parser.parse_args()
 # Get the environment and extract the number of actions.
 
 # CHANGED: env = gym.make(args.env_name)
-env = ManicMiner(frameskip=3, freccuency_mhz=1.3, crop=(8,8,0,64))
+env = ManicMiner(frameskip=2, freccuency_mhz=3.5)
 
 np.random.seed(123)
-env.seed(123)
-nb_actions = env.action_space.n
+# CHANGED: env.seed(123)
+nb_actions = len(env.actions())
 
 # Next, we build our model. We use the same model that was described by Mnih et al. (2015).
 input_shape = (WINDOW_LENGTH,) + INPUT_SHAPE
@@ -86,8 +84,7 @@ print(model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
-# memory = SequentialMemory(limit=1000000, window_length=WINDOW_LENGTH)
-memory = EfficientPriorizatedMemory(limit=1000000, window_length=WINDOW_LENGTH)
+memory = PrioritizedMemory(limit=100000, error=0.01, alfa=0.6, window_length=WINDOW_LENGTH)
 processor = SpectrumProcessor()
 
 # Select a policy. We use eps-greedy action selection, which means that a random action is selected
@@ -105,13 +102,9 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               processor=processor, nb_steps_warmup=100, gamma=.99, target_model_update=10,
+               processor=processor, nb_steps_warmup=100, gamma=.99, target_model_update=10000,
                train_interval=4, delta_clip=1., enable_double_dqn=False, enable_dueling_network=False)
 dqn.compile(Adam(lr=.00025), metrics=['mae'])
-
-
-
-start_step_policy = no_op_start_step_policy
 
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
@@ -119,24 +112,18 @@ if args.mode == 'train':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
-    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=25000)]
+    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
     callbacks += [FileLogger(log_filename, interval=100)]
-
-    #action_repetition=1 es igual que frame skiping=0
-
-    dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000,
-            action_repetition=1, start_step_policy=start_step_policy, nb_max_start_steps=30,
-            nb_max_episode_steps=1800, visualize=False, avarage_q={'n_evaluations': 10, 'bernoulli': 0.1},
-            starting_checkpoints=[i for i in xrange(17)])
+    dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000, visualize=False)
 
     # After training is done, we save the final weights one more time.
-    dqn.save_weights(weights_filename, overwrite=False)
+    dqn.save_weights(weights_filename, overwrite=True)
 
     # Finally, evaluate our algorithm for 10 episodes.
-    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=start_step_policy, visualize=True)
+    dqn.test(env, nb_episodes=10, visualize=True)
 elif args.mode == 'test':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=start_step_policy, visualize=True)
+    dqn.test(env, nb_episodes=10, visualize=True, PER=True)

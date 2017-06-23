@@ -13,7 +13,6 @@ from rl.keras_future import Model
 def mean_q(y_true, y_pred):
     return K.mean(K.max(y_pred, axis=-1))
 
-
 class AbstractDQNAgent(Agent):
     """Write me
     """
@@ -158,7 +157,7 @@ class DQNAgent(AbstractDQNAgent):
 
         # We never train the target model, hence we can set the optimizer and loss arbitrarily.
         self.target_model = clone_model(self.model, self.custom_model_objects)
-        self.target_model.compile(optimizer='sgd', loss='mse')
+        self.target_model.compile(optimizer='sgd', loss='mse') #PER: loss=huber_loss
         self.model.compile(optimizer='sgd', loss='mse')
 
         # Compile model.
@@ -197,7 +196,7 @@ class DQNAgent(AbstractDQNAgent):
     def load_weights(self, filepath):
         self.model.load_weights(filepath)
         self.update_target_model_hard()
-
+ 
     def save_weights(self, filepath, overwrite=False):
         self.model.save_weights(filepath, overwrite=overwrite)
 
@@ -231,10 +230,11 @@ class DQNAgent(AbstractDQNAgent):
 
         return action
 
+
     def backward(self, reward, terminal):
         # Store most recent experience in memory.
         if self.step % self.memory_interval == 0:
-            self.memory.append(self.recent_observation, self.recent_action, reward, terminal,
+            self.memory.append(self.recent_observation, action=self.recent_action, reward=reward, terminal=terminal,
                                training=self.training)
 
         metrics = [np.nan for _ in self.metrics_names]
@@ -249,12 +249,18 @@ class DQNAgent(AbstractDQNAgent):
             assert len(experiences) == self.batch_size
 
             # Start by extracting the necessary parameters (we use a vectorized implementation).
+            index_batch = []
             state0_batch = []
             reward_batch = []
             action_batch = []
             terminal1_batch = []
             state1_batch = []
             for e in experiences:
+                # priorized = None
+                # if type(e) is tuple:
+                #     index = e[0]
+                #     index_batch.append(index)
+                #     e = e[1]
                 state0_batch.append(e.state0)
                 state1_batch.append(e.state1)
                 reward_batch.append(e.reward)
@@ -286,6 +292,7 @@ class DQNAgent(AbstractDQNAgent):
                 assert target_q_values.shape == (self.batch_size, self.nb_actions)
                 q_batch = target_q_values[range(self.batch_size), actions]
             else:
+
                 # Compute the q_values given state1, and extract the maximum for each sample in the batch.
                 # We perform this prediction on the target_model instead of the model for reasons
                 # outlined in Mnih (2015). In short: it makes the algorithm more stable.
@@ -311,12 +318,26 @@ class DQNAgent(AbstractDQNAgent):
                 mask[action] = 1.  # enable loss for this specific action
             targets = np.array(targets).astype('float32')
             masks = np.array(masks).astype('float32')
+            
+            if self.memory.is_prioritized():
+                memory_update = []
+                for i in range(len(state0_batch)):
+                    state0 = state0_batch[i]
+                    action = action_batch[i]
+                    estimated_q_value_for_action = self.compute_q_values(state0)[action]
+                    error = np.absolute(Rs[i] - estimated_q_value_for_action)
+                    memory_update.append((experiences[i].priority_idx, error))
+                    
+
+                self.memory.update(memory_update)
 
             # Finally, perform a single update on the entire batch. We use a dummy target since
             # the actual loss is computed in a Lambda layer that needs more complex input. However,
             # it is still useful to know the actual target to compute metrics properly.
             ins = [state0_batch] if type(self.model.input) is not list else state0_batch
             metrics = self.trainable_model.train_on_batch(ins + [targets, masks], [dummy_targets, targets])
+
+
             metrics = [metric for idx, metric in enumerate(metrics) if idx not in (1, 2)]  # throw away individual losses
             metrics += self.policy.metrics
             if self.processor is not None:
@@ -386,7 +407,7 @@ class NAFLayer(Layer):
             # Create L and L^T matrix, which we use to construct the positive-definite matrix P.
             L = None
             LT = None
-            if K.backend() == 'theano':
+            if K.wend() == 'theano':
                 import theano.tensor as T
                 import theano
 

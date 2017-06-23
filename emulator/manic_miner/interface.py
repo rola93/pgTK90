@@ -2,8 +2,8 @@ import py_zx.Z80 as em
 import py_zx.spectrum as sp
 import constants as c
 import os
+import numpy as np
 from gym import spaces
-import pdb
 
 
 class ManicMiner:
