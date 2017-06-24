@@ -139,4 +139,5 @@ elif args.mode == 'test':
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=start_step_policy, visualize=True)
+    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, nb_max_episode_steps=1800,
+             start_step_policy=start_step_policy, visualize=True, starting_checkpoints=[i for i in xrange(17)])
