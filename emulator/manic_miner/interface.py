@@ -1,19 +1,28 @@
 import py_zx.Z80 as em
 import py_zx.spectrum as sp
 import constants as c
+import math
 import os
-from gym import spaces
-import pdb
-
+import numpy as np
 
 class ManicMiner:
-    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0), infinite_air=True):
+    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(5, 5, 0, 45)):
         assert isinstance(frameskip, int)
         self.frameskip = frameskip
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        sp.initialize(dir_path + '/ManicMiner.z80', iterruption_freccuency_mhz=freccuency_mhz, crop=crop)
+        sp.initialize(dir_path + '/ManicMiner.z80', iterruption_freccuency_mhz=freccuency_mhz)
+        self._skip_bug()
+        # Observation = 256 * 192 * 3
+        l = 256
+        w = 192
+        self.right_crop = crop[0]
+        self.left_crop = l - crop[1]
+        self.up_crop = crop[2]
+        self.down_crop = w - crop[3]
 
-        self.levels = [None for _ in xrange(20)]
+        assert crop[0] + crop[1] <= l and 0 <= crop[0] <= l and 0 <= crop[1] <= l
+        assert crop[2] + crop[3] <= w and 0 <= crop[0] <= w and 0 <= crop[1] <= w
+
         self.actual_frame = 0
         self.colors = [
             1, # blue
@@ -25,22 +34,9 @@ class ManicMiner:
         ]
 
         self.actual_frame = 0
-        self.action_space = spaces.Discrete(7)
-        # Redefinimos la funcion step
-        if infinite_air:
-            self.step = self.infinite_air_step
-        else:
-            self.step = self.common_step
 
-    def seed(self, seed):
-        """Sets the seed for this env's random number generator(s).
-        """
-        spaces.seed(seed)
-
-    def infinite_air_step(self, action):
-        self._air(23)
-
-        self.actual_frame += 1
+    def step(self, action):
+        self.actual_frame += self.frameskip
         initial_score = self._score()
         initial_level = self._level()
         sp.put_key(action)
@@ -50,59 +46,15 @@ class ManicMiner:
             if self._willy_died():
                 break
 
-        reward = self._score() - initial_score
-
-        #aire infinito, restamos 100 al morir
-        if self._willy_died():
-            reward += -100
-            done = self._reset(self._lives() - 1, self._level(), False)
-
-        info = {
-            "air": self._air(),
-            "lives": self._lives(),
-            "global_score": self._score(),
-            "current_level": self._level(),
-            "change_level": False
-        }
-
-        if initial_level != self._level():
-            # Paso de nivel
-            info["change_level"] = True
-            reward = self._air_to_score()
-
-            #por el momento al pasar de pabtalla reiniciamos con score +100
-            reward += 100
-            done = self._reset(self._lives() - 1, self._level(), False)
-
-            #current_score = self._score()
-            #self._score(current_score + reward)
-            #self._reset(self._lives(), self._level(), False)
-
-        self.change_portal_color()
-
-        obs = sp.get_frame_as_array()
-        return obs, reward, done, info
-
-    def common_step(self, action):
-        self.actual_frame += 1
-        initial_score = self._score()
-        initial_level = self._level()
-        sp.put_key(action)
-        done = False
-        for _ in range(self.frameskip + 1):
-            sp.execute()
-            if self._willy_died():
-                break
-
-        reward = self._score() - initial_score
+        reward = 0.
         # Is not discounting air. Im might help.
         if self._willy_died():
             # Doubt with the line below
-            # died without air
-            if self._air() > 0.63:
-                reward += -100
-
             done = self._reset(self._lives() - 1, self._level(), False)
+            reward = -1.
+        else:
+            reward = self._score() - initial_score
+
 
         info = {
             "air": self._air(),
@@ -111,23 +63,19 @@ class ManicMiner:
             "current_level": self._level(),
             "change_level": False
         }
-
+        
         if initial_level != self._level():
             # Paso de nivel
             info["change_level"] = True
             reward = self._air_to_score()
-
-            #por el momento al pasar de pabtalla reiniciamos con score +100
-            reward += 100
-            done = self._reset(self._lives() - 1, self._level(), False)
-
-            #current_score = self._score()
-            #self._score(current_score + reward)
-            #self._reset(self._lives(), self._level(), False)
+            current_score = self._score()
+            self._score(current_score + reward)
+            self._reset(self._lives(), self._level(), False)
 
         self.change_portal_color()
 
-        obs = sp.get_frame_as_array()
+        obs = sp.get_frame_as_array()[self.right_crop:self.left_crop, self.up_crop:self.down_crop, :]
+
         return obs, reward, done, info
 
     def render(self, mode='human'):
@@ -135,26 +83,15 @@ class ManicMiner:
 
     def reset(self, lives=0, level=0, checkpoint=None):
         if checkpoint:
-            checkpoint_state = sp.load_array_state_from_file(checkpoint)
-            sp.load_array_state(checkpoint_state)
+            sp.load_state(checkpoint)
         else:
             self._reset(lives, level, True)
 
         # cropped observation
         self.change_portal_color()
-        return sp.get_frame_as_array()
+        return sp.get_frame_as_array()[self.right_crop:self.left_crop, self.up_crop:self.down_crop, :]
 
     def _reset(self, lives, level, hard):
-        current_score = self._score()
-        if (lives < 0):
-            return True
-        self.load_level(level)
-        self._lives(lives)
-        if not hard:
-            self._score(current_score)
-        return False
-
-    def _reset_old(self, lives, level, hard):
         current_score = self._score()
         if (lives < 0):
             return True
@@ -164,10 +101,6 @@ class ManicMiner:
         sp.execute()
         sp.execute()
         sp.execute()
-        sp.execute()
-        sp.execute()
-        sp.execute()
-
         if (not hard):
             self._score(current_score)
         return False
@@ -175,17 +108,17 @@ class ManicMiner:
     def actions(self):
         return ['NOOP', 'ENTER', 'RIGHT', 'UP', 'LEFT', 'RIGHTUP', 'LEFTUP']
 
-    def no_op_action(self):
-        return 'NOOP'
-
     def action_space(self):
         return self.actions()
 
     def close(self):
         return sp.close()
 
+    def save_state(path):
+        sp.save_state(path)
+
     def _score(self, new_score=None):
-        # hidden overflow digits are taken into account
+        # se toma en cuenta los digitos de overflow que no se ven en pantalla
         if new_score:
             new_score_str = str(new_score)
             mem = em.mem
@@ -213,9 +146,6 @@ class ManicMiner:
             mem = em.mem
             a = mem[c.D_MANIC_MINER_LIVES]
             return int(a)
-
-    def get_air(self):
-        return self._air()
 
     def _air(self, air=None):
         # value ranges from 36 to 63
@@ -248,7 +178,7 @@ class ManicMiner:
     def _willy_died(self):
         mem = em.mem
         a = mem[c.D_MANIC_MINER_AIRBORNE_STATUS]
-        return bool(a == 255 or self._air() <= 0.63)
+        return bool(a == 255 or self._air() < 0.04)
 
     def _kill_willy_routine(self):
         sp.program_counter(c.R_KILL_WILLY)
@@ -277,7 +207,7 @@ class ManicMiner:
         sp.put_key("NOOP")
 
         input_var = "ENTER"
-        for j in xrange(262):
+        for j in xrange(240):
             sp.execute()
             sp.put_key(input_var)
 
@@ -293,26 +223,11 @@ class ManicMiner:
         willy = mem[32876]
         return portal, willy
 
-    def _willy_position(self, x=None, y=None):
-        mem = em.mem
-        if x != None:
-            mem[32876] = x
-        if y != None:
-            mem[32872] = y
-        return mem[32876], mem[32872]
-
     def save_state(self, path='state_dump'):
-        sp.save_array_state(path)
+        sp.save_state(path)
 
     def load_state(self, path='state_dump'):
-        loaded_data = sp.load_array_state_from_file(path)
-        sp.load_array_state(loaded_data)
-
-    def load_level(self, level=0):
-        assert 0 <= level <= 20
-        if not self.levels[level]:
-            self.levels[level] = sp.load_array_state_from_file('levels/{}'.format(level))
-        sp.load_array_state(self.levels[level])
+        sp.load_state(path)
 
     def poke(self, position, value=None):
         if value == None:
@@ -331,11 +246,16 @@ class ManicMiner:
 
     def change_portal_color(self):
         if self._level() == 0:
-            #pdb.set_trace()
-            if em.mem[32911]/128: # no more keys to collect
+            if self.poke(33836) == 53: # no more keys to collect
                 portal_dirs = [22973, 22974, 23005, 23006]
 
-                new_color = self.colors[(self.actual_frame) % 2]
+                new_color = self.colors[(self.actual_frame // 4) % 2]
 
                 for portal_dir in portal_dirs:
                     self.poke(portal_dir, new_color)
+
+                self.actual_frame += self.frameskip
+
+# 0        8        16       24      32        40      48
+# |        |        |        |        |        |        |
+#     0         1        2        3       0         1 

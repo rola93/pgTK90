@@ -36,62 +36,15 @@ class Agent(object):
         self.processor = processor
         self.training = False
         self.step = 0
-        self.evaluating_states = []
 
     def get_config(self):
         """Configuration of the agent for serialization.
         """
         return {}
 
-    def collect_avarage_q_checkpoints(self, env, avarage_q, starting_checkpoints): 
-        # note that nb_max_start_steps is not used
-        if avarage_q:
-            n_evaluations_left = avarage_q['n_evaluations'] if 'n_evaluations' in avarage_q else 10
-            bernoulli = int(1 / avarage_q['bernoulli']) if 'bernoulli' in avarage_q else 10
-            observation = None
-            observations = []
-
-            done = True
-            while n_evaluations_left > 0:
-                # Experience = namedtuple('Experience', 'state0, action, reward, state1, terminal1')
-
-                if done:
-                    # maintain human checkpoint replay
-                    if starting_checkpoints:
-                        checkpoint = np.random.choice(starting_checkpoints)
-                        observation = deepcopy(env.reset(checkpoint='checkpoints/{}'.format(checkpoint)))
-                    else:
-                        observation = deepcopy(env.reset())
-
-                    if self.processor is not None:
-                        observation = self.processor.process_observation(observation)
-                    
-                    assert observation is not None
-                    observations = [observation]
-                    done = False
-                else:
-                    action = env.action_space.sample() # Don't need to store action
-                    if self.processor is not None:
-                        action = self.processor.process_action(action)
-                        
-                    observation, reward, done, info = env.step(action)
-                    observation = deepcopy(observation)
-                    
-                    if self.processor is not None:
-                        observation, reward, done, info = self.processor.process_step(observation, reward, done, info)
-
-                    observations.append(observation)
-
-                    if np.random.randint(bernoulli) == 0:
-                        state = observations[-self.memory.window_length:]
-                        while len(state) < self.memory.window_length:
-                            state.insert(0, deepcopy(state[0]))
-                        self.evaluating_states.append(state)
-                        n_evaluations_left -= 1
-
     def fit(self, env, nb_steps, action_repetition=1, callbacks=None, verbose=1,
             visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
-            nb_max_episode_steps=None, starting_checkpoints=[], avarage_q=None):
+            nb_max_episode_steps=None, starting_checkpoints=[]):
         """Trains the agent on the given environment.
 
         # Arguments
@@ -116,17 +69,6 @@ class Agent(object):
             nb_max_episode_steps (integer): Number of steps per episode that the agent performs before
                 automatically resetting the environment. Set to `None` if each episode should run
                 (potentially indefinitely) until the environment signals a terminal state.
-            starting_checkpoints ([string]): starting checkpoints file names. When the enviroment is reset one
-                checkpoint from the list will be drawn at random and enviroment will start from that exact checkpoint. 
-                You can create the checkpoints using interactive_env.py.
-            nb_max_episode_steps (dictionary): provide the options in order to messure avarage Q after the end of each
-                episode. The metric will be added to the log as described at Playing Atari with Deep Reinforcement Learning.
-                The start of the training may be delay as it takes some time to choose the evaluationg states. 
-                You can either provide the two following options or a True boolean for using the defaults:
-                    n_evaluations (integer): number of checkpoints to be evaluated and avaraged (default: 10).
-                    bernoulli (float): bernoulli parameter. If succeed, the step will be chosen as a checkpoint.
-                    The smaller this number the longer will take to select the checkpoints (default: 0.1).
-
 
         # Returns
             A `keras.callbacks.History` instance that recorded the entire training process.
@@ -170,11 +112,11 @@ class Agent(object):
         episode_reward = None
         episode_step = None
         did_abort = False
+        episode_beginning = True
         try:
-            self.collect_avarage_q_checkpoints(env, avarage_q, starting_checkpoints)
-
             while self.step < nb_steps:
                 if observation is None:  # start of a new episode
+                    episode_beginning = True
                     callbacks.on_episode_begin(episode)
                     episode_step = 0
                     episode_reward = 0.
@@ -184,7 +126,7 @@ class Agent(object):
 
                     if starting_checkpoints:
                         checkpoint = np.random.choice(starting_checkpoints)
-                        observation = deepcopy(env.reset(checkpoint='checkpoints/{}'.format(checkpoint)))
+                        observation = deepcopy(env.reset(checkpoint=checkpoint))
                     else:
                         observation = deepcopy(env.reset())
                     if self.processor is not None:
@@ -194,7 +136,7 @@ class Agent(object):
                     # Perform random starts at beginning of episode and do not record them into the experience.
                     # This slightly changes the start position between games.
                     nb_random_start_steps = 0 if nb_max_start_steps == 0 else np.random.randint(nb_max_start_steps)
-                    for _ in xrange(nb_random_start_steps):
+                    for _ in range(nb_random_start_steps):
                         if start_step_policy is None:
                             action = env.action_space.sample()
                         else:
@@ -229,18 +171,20 @@ class Agent(object):
                 reward = 0.
                 accumulated_info = {}
                 done = False
+
+                # NOTA-EZE: Esto agrega complejidad al pe*o. El frameskip lo implementamos en el emulador
                 for _ in xrange(action_repetition):
                     callbacks.on_action_begin(action)
                     observation, r, done, info = env.step(action)
                     observation = deepcopy(observation)
                     if self.processor is not None:
                         observation, r, done, info = self.processor.process_step(observation, r, done, info)
-                    # for key, value in info.items():
-                    #     if not np.isreal(value):
-                    #         continue
-                    #     if key not in accumulated_info:
-                    #         accumulated_info[key] = np.zeros_like(value)
-                    #     accumulated_info[key] += value
+                    for key, value in info.items():
+                        if not np.isreal(value):
+                            continue
+                        if key not in accumulated_info:
+                            accumulated_info[key] = np.zeros_like(value)
+                        accumulated_info[key] += value
                     callbacks.on_action_end(action)
                     reward += r
                     if done:
@@ -248,6 +192,10 @@ class Agent(object):
                 if nb_max_episode_steps and episode_step >= nb_max_episode_steps - 1:
                     # Force a terminal state.
                     done = True
+                
+                # if self.memory.__class__.__name__ == 'PrioritizedMemory':
+                #     self.memory.append_with_error(observation, action, reward, done, episode_beginning)
+                
                 metrics = self.backward(reward, terminal=done)
                 episode_reward += reward
 
@@ -270,6 +218,12 @@ class Agent(object):
                     # the *next* state, that is the state of the newly reset environment, is
                     # always non-terminal by convention.
                     self.forward(observation)
+
+                    # if self.memory.__class__.__name__ == 'PrioritizedMemory':
+                    #     self.memory.append_with_error(observation)
+                    # if self.memory.__class__.__name__ == 'EfficientPriorizatedMemory':
+                    #     self.memory.append(observation)
+
                     self.backward(0., terminal=False)
 
                     # This episode is finished, report and reset.
@@ -277,16 +231,15 @@ class Agent(object):
                         'episode_reward': episode_reward,
                         'nb_episode_steps': episode_step,
                         'nb_steps': self.step,
-                        'global_score': info["global_score"]
                     }
 
-                    if self.evaluating_states:
-                        episode_logs['avarage_q'] = self.compute_avarage_q(self.evaluating_states) # computation is delegated to agent
-
-                    if starting_checkpoints:
-                        episode_logs['checkpoint'] = checkpoint
+                    if self.memory.is_prioritized():
+                        episode_logs['max_error_PER'] = self.memory.maximum
+                        episode_logs['average_error_PER'] = self.memory.average
+                        self.memory.reset_metrics()
 
                     callbacks.on_episode_end(episode, episode_logs)
+
                     episode += 1
                     observation = None
                     episode_step = None
@@ -337,7 +290,7 @@ class Agent(object):
 
         self._on_test_begin()
         callbacks.on_train_begin()
-        for episode in xrange(nb_episodes):
+        for episode in range(nb_episodes):
             callbacks.on_episode_begin(episode)
             episode_reward = 0.
             episode_step = 0
@@ -352,7 +305,7 @@ class Agent(object):
             # Perform random starts at beginning of episode and do not record them into the experience.
             # This slightly changes the start position between games.
             nb_random_start_steps = 0 if nb_max_start_steps == 0 else np.random.randint(nb_max_start_steps)
-            for _ in xrange(nb_random_start_steps):
+            for _ in range(nb_random_start_steps):
                 if start_step_policy is None:
                     action = env.action_space.sample()
                 else:
@@ -383,7 +336,7 @@ class Agent(object):
                     action = self.processor.process_action(action)
                 reward = 0.
                 accumulated_info = {}
-                for _ in xrange(action_repetition):
+                for _ in range(action_repetition):
                     callbacks.on_action_begin(action)
                     #print action
                     observation, r, d, info = env.step(action)
@@ -622,9 +575,9 @@ class MultiInputProcessor(Processor):
         self.nb_inputs = nb_inputs
 
     def process_state_batch(self, state_batch):
-        input_batches = [[] for x in xrange(self.nb_inputs)]
+        input_batches = [[] for x in range(self.nb_inputs)]
         for state in state_batch:
-            processed_state = [[] for x in xrange(self.nb_inputs)]
+            processed_state = [[] for x in range(self.nb_inputs)]
             for observation in state:
                 assert len(observation) == self.nb_inputs
                 for o, s in zip(observation, processed_state):
