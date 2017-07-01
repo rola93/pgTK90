@@ -425,15 +425,12 @@ def inb( port ):
 	return(res)
 
 def put_key(k):
-    key_repr = ['NOOP', 'ENTER', 'RIGHT', 'UP', 'LEFT', 'RIGHTUP', 'LEFTUP']
+    key_repr = ['NOOP', 'RIGHT', 'UP', 'LEFT', 'RIGHTUP', 'LEFTUP']
     global keys_vector
     keys_vector = [255, 255, 255, 255, 255, 255, 255, 255]
 
     if isinstance(k, int):
     	k = key_repr[k]
-
-    if k == 'ENTER' or k == 'e':
-        keys_vector[1] = 254
 
     if k == 'LEFT' or k == 'LEFTUP':
         keys_vector[4] -= 16

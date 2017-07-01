@@ -25,7 +25,7 @@ class ManicMiner:
         ]
 
         self.actual_frame = 0
-        self.action_space = spaces.Discrete(7)
+        self.action_space = spaces.Discrete(len(self.actions()))
         # Redefinimos la funcion step
         if infinite_air:
             self.step = self.infinite_air_step
@@ -173,7 +173,7 @@ class ManicMiner:
         return False
 
     def actions(self):
-        return ['NOOP', 'ENTER', 'RIGHT', 'UP', 'LEFT', 'RIGHTUP', 'LEFTUP']
+        return ['NOOP', 'RIGHT', 'UP', 'LEFT', 'RIGHTUP', 'LEFTUP']
 
     def no_op_action(self):
         return 'NOOP'
