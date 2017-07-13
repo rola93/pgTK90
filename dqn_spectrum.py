@@ -4,6 +4,8 @@ import argparse
 from PIL import Image
 import numpy as np
 
+import pdb
+
 # CHANGED: import gym
 from emulator.manic_miner.interface import ManicMiner
 
@@ -17,6 +19,9 @@ from rl.policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy
 from rl.memory import SequentialMemory, PrioritizedMemory, EfficientPriorizatedMemory
 from rl.core import Processor
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
+
+import os
+import json
 
 
 INPUT_SHAPE = (84, 84)
@@ -46,9 +51,10 @@ def no_op_start_step_policy(observation):
     return env.no_op_action()
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=['train', 'test'], default='train')
+parser.add_argument('--mode', choices=['train', 'test', 'batch_test'], default='train')
 parser.add_argument('--env-name', type=str, default='BreakoutDeterministic-v3')
 parser.add_argument('--weights', type=str, default=None)
+parser.add_argument('--methods_folder', type=str, default=None)
 args = parser.parse_args()
 
 # Get the environment and extract the number of actions.
@@ -105,7 +111,7 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=10000,
+               processor=processor, nb_steps_warmup=100, gamma=.99, target_model_update=200,
                train_interval=4, delta_clip=1., enable_double_dqn=True, enable_dueling_network=False)
 dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
@@ -119,7 +125,7 @@ if args.mode == 'train':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
-    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=25000)]
+    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=500)]
     callbacks += [FileLogger(log_filename, interval=100)]
 
     #action_repetition=1 es igual que frame skiping=0
@@ -141,3 +147,55 @@ elif args.mode == 'test':
     dqn.load_weights(weights_filename)
     dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, nb_max_episode_steps=1800,
              start_step_policy=start_step_policy, visualize=True, starting_checkpoints=[i for i in xrange(17)])
+elif args.mode == 'batch_test':
+#   Test a batch of methods with it's corresponding weights and output it on a log.
+#   The method expects a directory structure consisting of a a folder with the different methods as directories.
+#   There is an optional parameter --methods that takes the name of the folder that contains the mehods. 
+#   If no provided the default is 'methods'
+#   Contained in each method folder there should be the weights to be tested.
+#   The folder methods and weights starting with '__' will be ommited.
+#   For example:
+    
+#   methods
+#       |
+#       |_ DDQN
+#       |   |
+#       |   |_ weights_500.h5f
+#       |
+#       |_ DQN 
+#       |   |
+#       |   |_ weights_500.h5f
+#       |   |_ weights_1000.h5f
+#       |
+#       |_ __Dueling <----------- This method will be ignored
+#           |
+#           |_ weights_500.h5f
+
+    methods = args.methods_folder or 'methods'
+    log = {}
+    for method_name in [x for x in os.walk(methods)][0][1]:
+        if not method_name.startswith("__"):
+            print("[{}]".format(method_name))
+            weights_log = {}
+            for file_name in [x for x in os.walk("{}/{}".format(methods, method_name))][0][2]:
+                if not file_name.startswith("__") and file_name.split('.')[-1] == 'h5f':
+                    try:
+                        weights_number = int(file_name.split('_')[-1][:-4])
+                        print("Weights {}.-".format(weights_number))
+                        dqn.load_weights("{}/{}/{}".format(methods, method_name, file_name))
+                        logger = dqn.test(
+                            env, nb_episodes=50, 
+                            nb_max_start_steps=30, 
+                            action_repetition=1, 
+                            nb_max_episode_steps=180,
+                            start_step_policy=start_step_policy, 
+                            visualize=True
+                        )
+                        weights_log[weights_number] = logger.history
+                    except Exception as exc:
+                        weights_log["EXITED"] = str(exc)
+            log[method_name] = weights_log
+    log_file = open("method_log.json", "w")
+    json.dump(log, log_file)
+    log_file.close()
+

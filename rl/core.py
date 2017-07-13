@@ -299,9 +299,6 @@ class Agent(object):
                         episode_logs['average_error_PER'] = self.memory.average
                         self.memory.reset_metrics()
 
-                    if self.evaluating_states:
-                        episode_logs['avarage_q'] = self.compute_avarage_q(self.evaluating_states) # computation is delegated to agent
-
                     if starting_checkpoints:
                         episode_logs['checkpoint'] = checkpoint
 
@@ -455,7 +452,14 @@ class Agent(object):
             episode_logs = {
                 'episode_reward': episode_reward,
                 'nb_steps': episode_step,
+                'global_score': info["global_score"]
             }
+
+            if self.evaluating_states:
+                episode_logs['avarage_q'] = self.compute_avarage_q(self.evaluating_states) # computation is delegated to agent
+
+            if starting_checkpoints:
+                episode_logs['checkpoint'] = checkpoint
             callbacks.on_episode_end(episode, episode_logs)
         callbacks.on_train_end()
         self._on_test_end()
