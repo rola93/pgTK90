@@ -21,6 +21,7 @@ from rl.core import Processor
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 
 import os
+import sys
 import json
 
 
@@ -171,12 +172,18 @@ elif args.mode == 'batch_test':
 #           |
 #           |_ weights_500.h5f
 
+#   The log outputs the best found weights for each method 
+#   (if same reward chooses the one with less number of steps)
+
+#   Parametrers: nb_episodes, nb_max_start_steps and start_step_policy
+
     methods = args.methods_folder or 'methods'
     log = {}
     for method_name in [x for x in os.walk(methods)][0][1]:
         if not method_name.startswith("__"):
             print("[{}]".format(method_name))
             weights_log = {}
+            best_weights = [-sys.maxint, -1, -1] # (total reward, total steps, weights_number)
             for file_name in [x for x in os.walk("{}/{}".format(methods, method_name))][0][2]:
                 if not file_name.startswith("__") and file_name.split('.')[-1] == 'h5f':
                     try:
@@ -192,9 +199,16 @@ elif args.mode == 'batch_test':
                             visualize=True
                         )
                         weights_log[weights_number] = logger.history
+                        total_reward = sum(logger.history["episode_reward"])
+                        total_steps = sum(logger.history["nb_steps"])
+                        if (total_reward > best_weights[0]) or (total_reward == best_weights[0] and total_steps < best_weights[1]):
+                            best_weights[0] = total_reward
+                            best_weights[1] = total_steps
+                            best_weights[2] = weights_number
                     except Exception as exc:
                         weights_log["EXITED"] = str(exc)
             log[method_name] = weights_log
+            log[method_name]["best_weights"] = best_weights[2]
     log_file = open("method_log.json", "w")
     json.dump(log, log_file)
     log_file.close()
