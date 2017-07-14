@@ -150,11 +150,11 @@ elif args.mode == 'test':
              start_step_policy=start_step_policy, visualize=True, starting_checkpoints=[i for i in xrange(17)])
 elif args.mode == 'batch_test':
 #   Test a batch of methods with it's corresponding weights and output it on a log.
-#   The method expects a directory structure consisting of a a folder with the different methods as directories.
-#   There is an optional parameter --methods that takes the name of the folder that contains the mehods. 
-#   If no provided the default is 'methods'
-#   Contained in each method folder there should be the weights to be tested.
+#   The method expects a directory structure consisting of a folder with the different methods as directories.
+#   There is an optional parameter --methods that takes the name of the folder that contains the methods. 
+#   Contained in each method folder there should be the weights to be tested (default: 'methods').
 #   The folder methods and weights starting with '__' will be ommited.
+
 #   For example:
     
 #   methods
@@ -168,14 +168,14 @@ elif args.mode == 'batch_test':
 #       |   |_ weights_500.h5f
 #       |   |_ weights_1000.h5f
 #       |
-#       |_ __Dueling <----------- This method will be ignored
+#       |_ __Dueling <----------- This method will be ignored because it starts with __
 #           |
 #           |_ weights_500.h5f
 
 #   The log outputs the best found weights for each method 
-#   (if same reward chooses the one with less number of steps)
+#   (if same reward it chooses the one with less number of steps)
 
-#   Parametrers: nb_episodes, nb_max_start_steps and start_step_policy
+#   Tunable parametrers: nb_episodes, nb_max_start_steps and start_step_policy
 
     methods = args.methods_folder or 'methods'
     log = {}
