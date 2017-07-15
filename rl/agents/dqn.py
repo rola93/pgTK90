@@ -9,6 +9,23 @@ from rl.policy import EpsGreedyQPolicy, GreedyQPolicy
 from rl.util import *
 from rl.keras_future import Model
 
+#################### Start: Debug snipet ####################
+import time                                               
+import math
+
+def timeit(method):
+
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        math.e["{}.{}".format(method.__module__, method.__name__)] += te - ts
+        return result
+
+    return timed
+
+# paste @timeit on top of your function
+#################### End: Debug snipet ####################
 
 def mean_q(y_true, y_pred):
     return K.mean(K.max(y_pred, axis=-1))
@@ -193,10 +210,12 @@ class DQNAgent(AbstractDQNAgent):
 
         self.compiled = True
 
+    @timeit
     def load_weights(self, filepath):
         self.model.load_weights(filepath)
         self.update_target_model_hard()
- 
+    
+    @timeit
     def save_weights(self, filepath, overwrite=False):
         self.model.save_weights(filepath, overwrite=overwrite)
 
@@ -210,9 +229,11 @@ class DQNAgent(AbstractDQNAgent):
     def update_target_model_hard(self):
         self.target_model.set_weights(self.model.get_weights())
 
+    @timeit
     def compute_avarage_q(self, states):
         return np.mean(map(lambda state: max(self.compute_q_values(state)), states))
 
+    @timeit
     def forward(self, observation):
         # Select an action.
         state = self.memory.get_recent_state(observation)
@@ -230,7 +251,7 @@ class DQNAgent(AbstractDQNAgent):
 
         return action
 
-
+    @timeit
     def backward(self, reward, terminal):
         # Store most recent experience in memory.
         if self.step % self.memory_interval == 0:

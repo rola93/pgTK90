@@ -39,7 +39,7 @@ class CallbackList(KerasCallbackList):
         for callback in self.callbacks:
             if callable(getattr(callback, '_set_env', None)):
                 callback._set_env(env)
-
+    
     def on_episode_begin(self, episode, logs={}):
         for callback in self.callbacks:
             # Check if callback supports the more appropriate `on_episode_begin` callback.
@@ -90,7 +90,7 @@ class CallbackList(KerasCallbackList):
 class TestLogger(Callback):
     def on_train_begin(self, logs):
         print('Testing for {} episodes ...'.format(self.params['nb_episodes']))
-
+        
     def on_episode_end(self, episode, logs):
         template = 'Episode {0}: reward: {1:.3f}, steps: {2}'
         variables = [

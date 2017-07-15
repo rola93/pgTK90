@@ -5,6 +5,25 @@ import os
 import numpy as np
 from gym import spaces
 
+#################### Start: Debug snipet ####################
+import time                                               
+import math
+
+def timeit(method):
+
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        math.e["{}.{}".format(method.__module__, method.__name__)] += te - ts
+        return result
+
+    return timed
+
+# paste @timeit on top of your function
+#################### End: Debug snipet ####################
+
+
 
 class ManicMiner:
     def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0), infinite_air=True):
@@ -27,7 +46,7 @@ class ManicMiner:
         self.actual_frame = 0
         self.action_space = spaces.Discrete(len(self.actions()))
         # Redefinimos la funcion step
-        if infinite_air:
+        if False and infinite_air:
             self.step = self.infinite_air_step
         else:
             self.step = self.common_step
@@ -37,6 +56,7 @@ class ManicMiner:
         """
         spaces.seed(seed)
 
+    @timeit
     def infinite_air_step(self, action):
         self._air(23)
 
@@ -83,6 +103,7 @@ class ManicMiner:
         obs = sp.get_frame_as_array()
         return obs, reward, done, info
 
+    @timeit
     def common_step(self, action):
         self.actual_frame += 1
         initial_score = self._score()
@@ -130,9 +151,11 @@ class ManicMiner:
         obs = sp.get_frame_as_array()
         return obs, reward, done, info
 
+    @timeit
     def render(self, mode='human'):
         sp.render()
 
+    @timeit
     def reset(self, lives=0, level=0, checkpoint=None):
         if checkpoint:
             checkpoint_state = sp.load_array_state_from_file(checkpoint)
@@ -184,6 +207,7 @@ class ManicMiner:
     def close(self):
         return sp.close()
 
+    @timeit
     def _score(self, new_score=None):
         # hidden overflow digits are taken into account
         if new_score:

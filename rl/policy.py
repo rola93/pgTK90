@@ -22,6 +22,24 @@ class Policy(object):
     def get_config(self):
         return {}
 
+#################### Start: Debug snipet ####################
+import time                                               
+import math
+
+def timeit(method):
+
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        math.e["{}.{}".format(method.__module__, method.__name__)] += te - ts
+        return result
+
+    return timed
+
+# paste @timeit on top of your function
+#################### End: Debug snipet ####################
+
 
 class LinearAnnealedPolicy(Policy):
     def __init__(self, inner_policy, attr, value_max, value_min, value_test, nb_steps):
@@ -75,6 +93,7 @@ class EpsGreedyQPolicy(Policy):
         super(EpsGreedyQPolicy, self).__init__()
         self.eps = eps
 
+    @timeit
     def select_action(self, q_values):
         assert q_values.ndim == 1
         nb_actions = q_values.shape[0]
@@ -92,6 +111,7 @@ class EpsGreedyQPolicy(Policy):
 
 
 class GreedyQPolicy(Policy):
+    @timeit
     def select_action(self, q_values):
         assert q_values.ndim == 1
         action = np.argmax(q_values)

@@ -9,6 +9,35 @@ from rl.callbacks import TestLogger, TrainEpisodeLogger, TrainIntervalLogger, Vi
 import numpy as np
 np.random.seed(123)
 
+#################### Start: Debug snipet ####################
+import time                                               
+import math
+
+def timeit(method):
+
+    def timed(*args, **kw):
+        ts = time.time()
+        result = None
+        try:
+            result = method(*args, **kw)
+        except KeyboardInterrupt:
+            pass
+        te = time.time()
+        math.e["{}.{}".format(method.__module__, method.__name__)] += te - ts
+        return result
+
+    return timed
+
+# paste @timeit on top of your function
+
+def show_time_logger(title):
+    print('\n\n' + title + ' ######################')
+    for function, time in math.e.items():
+        print('{} = {}'.format(function, time))
+    print('######################\n\n')
+    return 1
+#################### End: Debug snipet ####################
+
 class Agent(object):
     """Abstract base class for all implemented agents.
 
@@ -43,6 +72,7 @@ class Agent(object):
         """
         return {}
 
+    @timeit
     def collect_avarage_q_checkpoints(self, env, avarage_q, starting_checkpoints): 
         # note that nb_max_start_steps is not used
         if avarage_q:
@@ -89,6 +119,7 @@ class Agent(object):
                         self.evaluating_states.append(state)
                         n_evaluations_left -= 1
 
+    @timeit
     def fit(self, env, nb_steps, action_repetition=1, callbacks=None, verbose=1,
             visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
             nb_max_episode_steps=None, starting_checkpoints=[], avarage_q=None):
@@ -312,11 +343,13 @@ class Agent(object):
             # This is so common that we've built this right into this function, which ensures that
             # the `on_train_end` method is properly called.
             did_abort = True
+            show_time_logger("FIT")
         callbacks.on_train_end(logs={'did_abort': did_abort})
         self._on_train_end()
 
         return history
 
+    @timeit
     def test(self, env, nb_episodes=1, action_repetition=1, callbacks=None, visualize=True,
              nb_max_episode_steps=None, nb_max_start_steps=0, start_step_policy=None,
              starting_checkpoints=[], verbose=1):

@@ -1,6 +1,13 @@
 from __future__ import division
 import argparse
 
+#################### Start: Debug snipet ####################
+from collections import defaultdict
+import math
+
+math.e = defaultdict(lambda: 0)
+#################### End: Debug snipet ####################
+
 from PIL import Image
 import numpy as np
 
@@ -25,31 +32,34 @@ import sys
 import json
 
 
+
+
+
 INPUT_SHAPE = (84, 84)
 WINDOW_LENGTH = 4
 
 # tengo que ver procesamiento de imagenes
 class SpectrumProcessor(Processor):
-    def process_observation(self, observation):
-        assert observation.ndim == 3  # (height, width, channel)
-        img = Image.fromarray(observation)
-        img = img.resize(INPUT_SHAPE).convert('L')  # resize and convert to grayscale
-        processed_observation = np.array(img)
-        assert processed_observation.shape == INPUT_SHAPE
-        return processed_observation.astype('uint8')  # saves storage in experience memory
+	def process_observation(self, observation):
+		assert observation.ndim == 3  # (height, width, channel)
+		img = Image.fromarray(observation)
+		img = img.resize(INPUT_SHAPE).convert('L')  # resize and convert to grayscale
+		processed_observation = np.array(img)
+		assert processed_observation.shape == INPUT_SHAPE
+		return processed_observation.astype('uint8')  # saves storage in experience memory
 
-    def process_state_batch(self, batch):
-        # We could perform this processing step in `process_observation`. In this case, however,
-        # we would need to store a `float32` array instead, which is 4x more memory intensive than
-        # an `uint8` array. This matters if we store 1M observations.
-        processed_batch = batch.astype('float32') / 255.
-        return processed_batch
+	def process_state_batch(self, batch):
+		# We could perform this processing step in `process_observation`. In this case, however,
+		# we would need to store a `float32` array instead, which is 4x more memory intensive than
+		# an `uint8` array. This matters if we store 1M observations.
+		processed_batch = batch.astype('float32') / 255.
+		return processed_batch
 
-    def process_reward(self, reward):
-        return np.clip(reward, -1., 1.)
+	def process_reward(self, reward):
+		return np.clip(reward, -1., 1.)
 
 def no_op_start_step_policy(observation):
-    return env.no_op_action()
+	return env.no_op_action()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test', 'batch_test'], default='train')
@@ -71,13 +81,13 @@ nb_actions = env.action_space.n
 input_shape = (WINDOW_LENGTH,) + INPUT_SHAPE
 model = Sequential()
 if K.image_dim_ordering() == 'tf':
-    # (width, height, channels)
-    model.add(Permute((2, 3, 1), input_shape=input_shape))
+	# (width, height, channels)
+	model.add(Permute((2, 3, 1), input_shape=input_shape))
 elif K.image_dim_ordering() == 'th':
-    # (channels, width, height)
-    model.add(Permute((1, 2, 3), input_shape=input_shape))
+	# (channels, width, height)
+	model.add(Permute((1, 2, 3), input_shape=input_shape))
 else:
-    raise RuntimeError('Unknown image_dim_ordering.')
+	raise RuntimeError('Unknown image_dim_ordering.')
 model.add(Convolution2D(32, 8, 8, subsample=(4, 4)))
 model.add(Activation('relu'))
 model.add(Convolution2D(64, 4, 4, subsample=(2, 2)))
@@ -103,7 +113,7 @@ processor = SpectrumProcessor()
 # (low eps). We also set a dedicated eps value that is used during testing. Note that we set it to 0.05
 # so that the agent still performs some random actions. This ensures that the agent cannot get stuck.
 policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05,
-                              nb_steps=1000000)
+							  nb_steps=1000000)
 
 # The trade-off between exploration and exploitation is difficult and an on-going research topic.
 # If you want, you can experiment with the parameters or use a different policy. Another popular one
@@ -112,8 +122,8 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               processor=processor, nb_steps_warmup=100, gamma=.99, target_model_update=200,
-               train_interval=4, delta_clip=1., enable_double_dqn=True, enable_dueling_network=False)
+			   processor=processor, nb_steps_warmup=100, gamma=.99, target_model_update=200,
+			   train_interval=4, delta_clip=1., enable_double_dqn=True, enable_dueling_network=False)
 dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
 
@@ -121,33 +131,32 @@ dqn.compile(Adam(lr=.00025), metrics=['mae'])
 start_step_policy = no_op_start_step_policy
 
 if args.mode == 'train':
-    # Okay, now it's time to learn something! We capture the interrupt exception so that training
-    # can be prematurely aborted. Notice that you can the built-in Keras callbacks!
-    weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
-    checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
-    log_filename = 'dqn_{}_log.json'.format(args.env_name)
-    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=500)]
-    callbacks += [FileLogger(log_filename, interval=100)]
+	# Okay, now it's time to learn something! We capture the interrupt exception so that training
+	# can be prematurely aborted. Notice that you can the built-in Keras callbacks!
+	weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
+	checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
+	log_filename = 'dqn_{}_log.json'.format(args.env_name)
+	callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=500)]
+	callbacks += [FileLogger(log_filename, interval=100)]
 
-    #action_repetition=1 es igual que frame skiping=0
+	#action_repetition=1 es igual que frame skiping=0
+	dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000,
+			action_repetition=1, start_step_policy=start_step_policy, nb_max_start_steps=30,
+			nb_max_episode_steps=1800, visualize=False, avarage_q={'n_evaluations': 10, 'bernoulli': 0.1},
+			starting_checkpoints=[i for i in xrange(17)])
 
-    dqn.fit(env, callbacks=callbacks, nb_steps=100000000, log_interval=10000,
-            action_repetition=1, start_step_policy=start_step_policy, nb_max_start_steps=30,
-            nb_max_episode_steps=1800, visualize=False, avarage_q={'n_evaluations': 10, 'bernoulli': 0.1},
-            starting_checkpoints=[i for i in xrange(17)])
+	# After training is done, we save the final weights one more time.
+	dqn.save_weights(weights_filename, overwrite=False)
 
-    # After training is done, we save the final weights one more time.
-    dqn.save_weights(weights_filename, overwrite=False)
-
-    # Finally, evaluate our algorithm for 10 episodes.
-    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=start_step_policy, visualize=True)
+	# Finally, evaluate our algorithm for 10 episodes.
+	dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, start_step_policy=start_step_policy, visualize=True)
 elif args.mode == 'test':
-    weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
-    if args.weights:
-        weights_filename = args.weights
-    dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, nb_max_episode_steps=1800,
-             start_step_policy=start_step_policy, visualize=True, starting_checkpoints=[i for i in xrange(17)])
+	weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
+	if args.weights:
+		weights_filename = args.weights
+	dqn.load_weights(weights_filename)
+	dqn.test(env, nb_episodes=10, nb_max_start_steps=30, action_repetition=1, nb_max_episode_steps=1800,
+			 start_step_policy=start_step_policy, visualize=True, starting_checkpoints=[i for i in xrange(17)])
 elif args.mode == 'batch_test':
 #   Test a batch of methods with it's corresponding weights and output it on a log.
 #   The method expects a directory structure consisting of a folder with the different methods as directories.
@@ -156,7 +165,7 @@ elif args.mode == 'batch_test':
 #   The folder methods and weights starting with '__' will be ommited.
 
 #   For example:
-    
+	
 #   methods
 #       |
 #       |_ DDQN
@@ -177,39 +186,39 @@ elif args.mode == 'batch_test':
 
 #   Tunable parametrers: nb_episodes, nb_max_start_steps and start_step_policy
 
-    methods = args.methods_folder or 'methods'
-    log = {}
-    for method_name in [x for x in os.walk(methods)][0][1]:
-        if not method_name.startswith("__"):
-            print("[{}]".format(method_name))
-            weights_log = {}
-            best_weights = [-sys.maxint, -1, -1] # (total reward, total steps, weights_number)
-            for file_name in [x for x in os.walk("{}/{}".format(methods, method_name))][0][2]:
-                if not file_name.startswith("__") and file_name.split('.')[-1] == 'h5f':
-                    try:
-                        weights_number = int(file_name.split('_')[-1][:-4])
-                        print("Weights {}.-".format(weights_number))
-                        dqn.load_weights("{}/{}/{}".format(methods, method_name, file_name))
-                        logger = dqn.test(
-                            env, nb_episodes=50, 
-                            nb_max_start_steps=30, 
-                            action_repetition=1, 
-                            nb_max_episode_steps=180,
-                            start_step_policy=start_step_policy, 
-                            visualize=True
-                        )
-                        weights_log[weights_number] = logger.history
-                        total_reward = sum(logger.history["episode_reward"])
-                        total_steps = sum(logger.history["nb_steps"])
-                        if (total_reward > best_weights[0]) or (total_reward == best_weights[0] and total_steps < best_weights[1]):
-                            best_weights[0] = total_reward
-                            best_weights[1] = total_steps
-                            best_weights[2] = weights_number
-                    except Exception as exc:
-                        weights_log["EXITED"] = str(exc)
-            log[method_name] = weights_log
-            log[method_name]["best_weights"] = best_weights[2]
-    log_file = open("method_log.json", "w")
-    json.dump(log, log_file)
-    log_file.close()
+	methods = args.methods_folder or 'methods'
+	log = {}
+	for method_name in [x for x in os.walk(methods)][0][1]:
+		if not method_name.startswith("__"):
+			print("[{}]".format(method_name))
+			weights_log = {}
+			best_weights = [-sys.maxint, -1, -1] # (total reward, total steps, weights_number)
+			for file_name in [x for x in os.walk("{}/{}".format(methods, method_name))][0][2]:
+				if not file_name.startswith("__") and file_name.split('.')[-1] == 'h5f':
+					try:
+						weights_number = int(file_name.split('_')[-1][:-4])
+						print("Weights {}.-".format(weights_number))
+						dqn.load_weights("{}/{}/{}".format(methods, method_name, file_name))
+						logger = dqn.test(
+							env, nb_episodes=50, 
+							nb_max_start_steps=30, 
+							action_repetition=1, 
+							nb_max_episode_steps=180,
+							start_step_policy=start_step_policy, 
+							visualize=True
+						)
+						weights_log[weights_number] = logger.history
+						total_reward = sum(logger.history["episode_reward"])
+						total_steps = sum(logger.history["nb_steps"])
+						if (total_reward > best_weights[0]) or (total_reward == best_weights[0] and total_steps < best_weights[1]):
+							best_weights[0] = total_reward
+							best_weights[1] = total_steps
+							best_weights[2] = weights_number
+					except Exception as exc:
+						weights_log["EXITED"] = str(exc)
+			log[method_name] = weights_log
+			log[method_name]["best_weights"] = best_weights[2]
+	log_file = open("method_log.json", "w")
+	json.dump(log, log_file)
+	log_file.close()
 

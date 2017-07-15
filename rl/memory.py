@@ -7,6 +7,24 @@ import numpy as np
 from copy import deepcopy
 from rl.sum_tree import SumTree
 
+#################### Start: Debug snipet ####################
+import time                                               
+import math
+
+def timeit(method):
+
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        math.e["{}.{}".format(method.__module__, method.__name__)] += te - ts
+        return result
+
+    return timed
+
+# paste @timeit on top of your function
+#################### End: Debug snipet ####################
+
 # This is to be understood as a transition: Given `state0`, performing `action`
 # yields `reward` and results in `state1`, which might be `terminal`.
 Experience = namedtuple('Experience', 'state0, action, reward, state1, terminal1')
@@ -356,6 +374,7 @@ class EfficientPriorizatedMemory(Memory):
     def is_prioritized(self):
         return True
 
+    @timeit
     def _sample_priorizated_batch(self, batch_size):
         # Returns a list of pairs (idx, data)
         batch = []
@@ -375,6 +394,7 @@ class EfficientPriorizatedMemory(Memory):
         assert len(batch) == batch_size
         return batch
 
+    @timeit
     def append(self, observation, action, reward, terminal, training=True, error=1):
         super(EfficientPriorizatedMemory, self).append(observation, action, reward, terminal, training=training)
 
@@ -387,6 +407,7 @@ class EfficientPriorizatedMemory(Memory):
             self.terminals.append(terminal)
             self.priorities.add(p=self._get_priority(error), data=i)
 
+    @timeit
     def sample_secuential_batch(self, batch_size):
 
         # if type(priority_idx[i]) == tuple:
@@ -460,9 +481,11 @@ class EfficientPriorizatedMemory(Memory):
         assert len(experiences) == batch_size
         return experiences
 
+    @timeit
     def sample(self, batch_size, batch_idxs=None):
         return self.sample_secuential_batch(batch_size)
 
+    @timeit
     def update(self, updated_error_pairs):
         for idx, error in updated_error_pairs:
             self.priorities.update(idx, self._get_priority(error))
