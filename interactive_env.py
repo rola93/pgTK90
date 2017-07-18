@@ -71,6 +71,23 @@ for episode in xrange(20):
             print("Saved checkpoint #{}".format(saved))
             saved += 1
             continue
+        elif command == 'k':
+            key = raw_input('Select number key? [1,2,3,4,5]')
+            position = raw_input('Select screen position [0,..,512]')
+            manic_miner.key_position(int(key),int(position))
+            manic_miner.step('NOOP')
+            manic_miner.render()
+            continue
+        elif command == 't':
+            print '0-background\n', '1-floor\n', '2-crumbling_floor\n', '3-wall\n', '4-conveyor\n', '5-nasty_1\n', '6-nasty_2\n'
+            types = ['background', 'floor', 'crumbling_floor', 'wall', 'conveyor', 'nasty_1', 'nasty_2']
+            typeNumber = raw_input('Select tile type?')
+            position = raw_input('Select screen position [0,..,256] (only top screen :\'( )')
+
+            manic_miner.put_tile(int(position), types[int(typeNumber)])
+            manic_miner.step('NOOP')
+            manic_miner.render()
+            continue
         elif command == 'l':
             restore_name = raw_input('Number/name of state to restore [Enter to cancel]:')
             if restore_name:

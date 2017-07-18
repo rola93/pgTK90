@@ -112,7 +112,7 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               processor=processor, nb_steps_warmup=100, gamma=.99, target_model_update=200,
+               processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=10000,
                train_interval=4, delta_clip=1., enable_double_dqn=True, enable_dueling_network=False)
 dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
@@ -126,7 +126,7 @@ if args.mode == 'train':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
-    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=500)]
+    callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=2500)]
     callbacks += [FileLogger(log_filename, interval=100)]
 
     #action_repetition=1 es igual que frame skiping=0

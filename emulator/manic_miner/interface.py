@@ -339,3 +339,78 @@ class ManicMiner:
 
                 for portal_dir in portal_dirs:
                     self.poke(portal_dir, new_color)
+
+    # key_number indica la llave a mover, entero entre 1 y 5
+    # value indica la posicion, valor entre 0 y 512
+    def key_position(self, key_number, value):
+        value = value % 512
+
+        const_default = 92
+        const_default2 = 96
+
+        if (value > 255):
+            const_default = 93
+            const_default2 = 104
+
+        if key_number == 1:
+            em.mem[32886] = value
+            em.mem[32887] = const_default
+            em.mem[32888] = const_default2
+
+        if key_number == 2:
+            em.mem[32891] = value
+            em.mem[32892] = const_default
+            em.mem[32893] = const_default2
+
+        if key_number == 3:
+            em.mem[32896] = value
+            em.mem[32897] = const_default
+            em.mem[32898] = const_default2
+
+        if key_number == 4:
+            em.mem[32901] = value
+            em.mem[32902] = const_default
+            em.mem[32903] = const_default2
+
+        if key_number == 5:
+            em.mem[32906] = value
+            em.mem[32907] = const_default
+            em.mem[32908] = const_default2
+
+    def _get_tile(self, type):
+        item = []
+        position = 0
+        if(type=='background'):
+            position = 32800
+
+        if (type=='floor'):
+            position = 32809
+
+        if (type=='crumbling_floor'):
+            position = 32818
+
+        if (type=='wall'):
+            position = 32827
+
+        if (type=='conveyor'):
+            position = 32836
+
+        if (type=='nasty_1'):
+            position = 32845
+
+        if (type=='nasty_2'):
+            position = 32854
+
+        for pos in xrange(0,9):
+            item.append(em.mem[position+pos])
+
+        return item
+
+    #position 0, 256
+    def put_tile(self, position, type):
+        item = self._get_tile(type)
+        position = position % 256
+        #change colour
+        em.mem[24064 + position] = item[0]
+        for byte in xrange(0, 8):
+            em.mem[28672 + byte * 256 + position] = item[byte+1]
