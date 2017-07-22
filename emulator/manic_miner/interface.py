@@ -5,7 +5,6 @@ import os
 import numpy as np
 from gym import spaces
 
-
 class ManicMiner:
     def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0), infinite_air=True):
         assert isinstance(frameskip, int)
@@ -340,6 +339,10 @@ class ManicMiner:
                 for portal_dir in portal_dirs:
                     self.poke(portal_dir, new_color)
 
+
+
+    #region edicion de pantalla--------------------------------
+
     # key_number indica la llave a mover, entero entre 1 y 5
     # value indica la posicion, valor entre 0 y 512
     def key_position(self, key_number, value):
@@ -377,7 +380,25 @@ class ManicMiner:
             em.mem[32907] = const_default
             em.mem[32908] = const_default2
 
-    def _get_tile(self, type):
+    def get_key_position(self, key_number):
+        if key_number == 1:
+            value = em.mem[32886]
+
+        if key_number == 2:
+            value = em.mem[32891]
+
+        if key_number == 3:
+            value = em.mem[32896]
+
+        if key_number == 4:
+            value = em.mem[32901]
+
+        if key_number == 5:
+            value = em.mem[32906]
+
+        return value
+
+    def get_tile_definition(self, type):
         item = []
         position = 0
         if(type=='background'):
@@ -406,11 +427,97 @@ class ManicMiner:
 
         return item
 
-    #position 0, 256
-    def put_tile(self, position, type):
-        item = self._get_tile(type)
-        position = position % 256
+    #position 0, 512
+    #la mitad superior de la pantalla estan desde 0 a 2047 (8bytes * 256 posiciones)
+    def put_tile(self, position, item):
+        position = position % 512
+
+        if(position>255):
+            mem_position = 1792 + position#2048 + position % 256
+        else:
+            mem_position = position
+
+
         #change colour
         em.mem[24064 + position] = item[0]
         for byte in xrange(0, 8):
-            em.mem[28672 + byte * 256 + position] = item[byte+1]
+            em.mem[28672 + byte * 256 + mem_position] = item[byte+1]
+
+    def select_tile(self, position, color):
+        position = position % 512
+        old_color = em.mem[24064 + position]
+        em.mem[24064 + position] = color
+        return old_color
+
+
+    def compare_tile(self, position):
+        print self.get_tile_type(position)
+
+    def get_tile(self, position):
+        position = position % 512
+
+        item = []
+        #colour
+        item.append(em.mem[24064 + position])
+
+        if (position > 255):
+            mem_position = 1792 + position  # 2048 + position % 256
+        else:
+            mem_position = position
+
+        for byte in xrange(0, 8):
+            item.append(em.mem[28672 + byte * 256 + mem_position])
+
+        return item
+
+    def get_tile_type(self, position):
+        background = []
+        floor = []
+        crumbling_floor = []
+        wall = []
+        conveyor = []
+        nasty_1 = []
+        nasty_2 = []
+
+        for byte in xrange(0, 9):
+            background.append(em.mem[32800 + byte])
+            floor.append(em.mem[32809 + byte])
+            crumbling_floor.append(em.mem[32818 + byte])
+            wall.append(em.mem[32827 + byte])
+            conveyor.append(em.mem[32836 + byte])
+            nasty_1.append(em.mem[32845 + byte])
+            nasty_2.append(em.mem[32854 + byte])
+
+        item = self.get_tile(position)
+
+        if(item==background):
+            return 'background'
+        if(item==floor):
+            return 'floor'
+        if(item==crumbling_floor):
+            return 'crumbling_floor'
+        if(item==wall):
+            return 'wall'
+        if(item==conveyor):
+            return 'conveyor'
+        if(item==nasty_1):
+            return 'nasty_1'
+        if(item==nasty_2):
+            return 'nasty_2'
+
+        return 'other'
+
+    def change_def_tile(self,name,new_tile):
+        for pos in xrange(0, 512):
+            tile = self.get_tile_type(pos)
+            if(tile!=name):
+                print 'continue'
+                continue
+            self.put_tile(pos,new_tile)
+
+    def change_guardian_graphic(self):
+        for pos in xrange(0, 64):
+            for byte in xrange(0, 8):
+                em.mem[33024 + 8*pos+ byte] = em.mem[45824+ 8*pos+ byte]
+                em.mem[32948+byte] = em.mem[45748+byte]
+

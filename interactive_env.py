@@ -1,6 +1,7 @@
 from emulator.manic_miner import ManicMiner
 from scipy.misc import imsave
 from pdb import set_trace
+import pygame, sys
 
 folder = 'checkpoints'
 lives = 0
@@ -71,23 +72,153 @@ for episode in xrange(20):
             print("Saved checkpoint #{}".format(saved))
             saved += 1
             continue
-        elif command == 'k':
-            key = raw_input('Select number key? [1,2,3,4,5]')
-            position = raw_input('Select screen position [0,..,512]')
-            manic_miner.key_position(int(key),int(position))
-            manic_miner.step('NOOP')
-            manic_miner.render()
-            continue
-        elif command == 't':
+        elif command == 'key':
+            print 'Click en la pantalla, Select key?[1,2,3,4,5], move with arrows, q for quit'
+
+            pygame.init()
+            key = 1
+            position = 0
+            mov = 0
+            old_color = None
+            type = None
+            quit = False
+            while not quit:
+                events = pygame.event.get()
+
+                for event in events:
+                    # up 273
+                    if event.type != 3:
+                        continue
+                    if event.key == pygame.K_UP:
+                        mov = -32
+                    if event.key == pygame.K_DOWN:
+                        mov = 32
+                    if event.key == pygame.K_LEFT:
+                        mov = -1
+                    if event.key == pygame.K_RIGHT:
+                        mov = 1
+                    if event.key == pygame.K_1:
+                        key = 1
+                    if event.key == pygame.K_2:
+                        key = 2
+                    if event.key == pygame.K_3:
+                        key = 3
+                    if event.key == pygame.K_4:
+                        key = 4
+                    if event.key == pygame.K_5:
+                        key = 5
+                    if event.key == pygame.K_q:
+                        print 'QUIT'
+                        quit = True
+
+                    position = manic_miner.get_key_position(key)
+                    position = (position + mov) % 512
+                    mov = 0
+
+                    if (type != None):
+                        manic_miner.put_tile(int(position), manic_miner.get_tile_definition(types[type]))
+                        type = None
+
+                    manic_miner.key_position(int(key),int(position))
+                    manic_miner.step('NOOP')
+                    manic_miner.render()
+                    continue
+        elif command == 'play':
+            print 'Click en la pantalla, move with arrows, esc for quit'
+            pygame.init()
+            arrow = None
+            quit = False
+            while not quit:
+                events = pygame.event.get()
+
+                for event in events:
+                    # up 273
+                    if event.type != 3:
+                        continue
+                    if event.key == pygame.K_w:
+                        arrow = 'UP'
+                    elif event.key == pygame.K_s:
+                        arrow = 'NOOP'
+                    elif event.key == pygame.K_a:
+                        arrow = 'LEFT'
+                    elif event.key == pygame.K_d:
+                        arrow = 'RIGHT'
+                    elif event.key == pygame.K_q:
+                        arrow = 'LEFTUP'
+                    elif event.key == pygame.K_e:
+                        arrow = 'RIGHTUP'
+                    elif event.key == pygame.K_ESCAPE:
+                        print 'QUIT'
+                        quit = True
+                    else:
+                        continue
+
+                    obs, reward, done, info = manic_miner.step(arrow)
+                    manic_miner.render()
+                    if done:
+                        quit = True
+                    continue
+        elif command == 'edit':
+            print 'Click in game, move with arrows, q for quit'
             print '0-background\n', '1-floor\n', '2-crumbling_floor\n', '3-wall\n', '4-conveyor\n', '5-nasty_1\n', '6-nasty_2\n'
             types = ['background', 'floor', 'crumbling_floor', 'wall', 'conveyor', 'nasty_1', 'nasty_2']
-            typeNumber = raw_input('Select tile type?')
-            position = raw_input('Select screen position [0,..,256] (only top screen :\'( )')
 
-            manic_miner.put_tile(int(position), types[int(typeNumber)])
-            manic_miner.step('NOOP')
-            manic_miner.render()
-            continue
+            pygame.init()
+            position = 0
+            mov = 0
+            old_color = None
+            type = None
+            quit = False
+            while not quit:
+                events = pygame.event.get()
+
+                for event in events:
+                    #up 273
+                    if event.type != 3:
+                        continue
+                    if event.key == pygame.K_UP:
+                        mov = -32
+                    if event.key == pygame.K_DOWN:
+                        mov = 32
+                    if event.key == pygame.K_LEFT:
+                        mov = -1
+                    if event.key == pygame.K_RIGHT:
+                        mov = 1
+                    if event.key == pygame.K_0:
+                        type = 0
+                    if event.key == pygame.K_1:
+                        type = 1
+                    if event.key == pygame.K_2:
+                        type = 2
+                    if event.key == pygame.K_3:
+                        type = 3
+                    if event.key == pygame.K_4:
+                        type = 4
+                    if event.key == pygame.K_5:
+                        type = 5
+                    if event.key == pygame.K_6:
+                        type = 6
+                    if event.key == pygame.K_q:
+                        print 'QUIT'
+                        quit = True
+
+                    if(old_color!= None):
+                        manic_miner.select_tile(position,old_color)
+                        old_color = None
+
+                    position = (position + mov) % 512
+                    mov = 0
+
+                    if(type!=None):
+                        manic_miner.put_tile(int(position), manic_miner.get_tile_definition(types[type]))
+                        type = None
+
+                    if(not quit):
+                        old_color = manic_miner.select_tile(position, 40)
+
+                    manic_miner.step('NOOP')
+                    manic_miner.render()
+                    continue
         elif command == 'l':
             restore_name = raw_input('Number/name of state to restore [Enter to cancel]:')
             if restore_name:
