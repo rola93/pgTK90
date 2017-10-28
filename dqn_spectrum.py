@@ -56,12 +56,28 @@ parser.add_argument('--mode', choices=['train', 'test', 'batch_test'], default='
 parser.add_argument('--env-name', type=str, default='BreakoutDeterministic-v3')
 parser.add_argument('--weights', type=str, default=None)
 parser.add_argument('--methods_folder', type=str, default=None)
+parser.add_argument('--gif', type=str, default=None, help='GIF name')
+parser.add_argument('--gif_limit', type=int, default=1000, help='GIF length in steps')
+parser.add_argument('--gif_interval', type=int, default=None, help='GIF is backed up every gif_interval steps')
 args = parser.parse_args()
 
 # Get the environment and extract the number of actions.
 
+if args.gif:
+    if not os.path.exists(args.gif):
+        os.makedirs(args.gif)
+    else:
+        raise Exception('invalid GIF name')
+
 # CHANGED: env = gym.make(args.env_name)
-env = ManicMiner(frameskip=3, freccuency_mhz=1.3, crop=(8,8,0,64))
+env = ManicMiner(
+    frameskip=3, 
+    freccuency_mhz=1.3, 
+    crop=(8,8,0,64), 
+    gif_name=args.gif, 
+    gif_step_limit=args.gif_limit,
+    gif_steps_interval=args.gif_interval
+)
 
 np.random.seed(123)
 env.seed(123)

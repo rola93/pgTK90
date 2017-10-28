@@ -4,9 +4,18 @@ import constants as c
 import os
 import numpy as np
 from gym import spaces
+from scipy.misc import imsave
+import imageio
+
 
 class ManicMiner:
-    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0), infinite_air=True):
+    def __init__(self, frameskip=1, freccuency_mhz=3.5, crop=(0, 0, 0, 0), infinite_air=True, gif_name=None, gif_steps_interval=None, gif_step_limit=None):
+        self.gif_name = gif_name
+        self.gif_steps_interval = gif_steps_interval
+        self.gif_step_limit = gif_step_limit
+
+        self.frame_files = []
+
         assert isinstance(frameskip, int)
         self.frameskip = frameskip
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -80,6 +89,9 @@ class ManicMiner:
         self.change_portal_color()
 
         obs = sp.get_frame_as_array()
+
+        self.gif(obs)
+
         return obs, reward, done, info
 
     def common_step(self, action):
@@ -127,10 +139,29 @@ class ManicMiner:
         self.change_portal_color()
 
         obs = sp.get_frame_as_array()
+        
+        self.gif(obs)
+        
         return obs, reward, done, info
 
     def render(self, mode='human'):
         sp.render()
+
+    def gif(self, obs):
+        obs_rotated = np.fliplr(np.rot90(obs, 3)) # new numpy flip(obs, 0)
+        if self.gif_name and self.gif_step_limit >= self.actual_frame:
+
+            frame_file_name = '{}/{}.jpg'.format(self.gif_name, self.actual_frame)
+            imsave(frame_file_name, obs_rotated)
+            self.frame_files.append(imageio.imread(frame_file_name))
+            
+            # backup the gif if there is a gif_steps_interval set
+            if self.gif_steps_interval and self.actual_frame % self.gif_steps_interval == 0:
+                imageio.mimsave('{}/{}.gif'.format(self.gif_name, self.gif_name), self.frame_files)
+
+            if self.actual_frame == self.gif_step_limit:
+                imageio.mimsave('{}/{}.gif'.format(self.gif_name, self.gif_name), self.frame_files)
+                print('GIF creation FINISHED.')
 
     def reset(self, lives=0, level=0, checkpoint=None):
         if checkpoint:
